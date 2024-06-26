@@ -7,7 +7,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///conversations.db'
 
 # Initialize OpenAI client
 client = OpenAI(
-    api_key='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'  # Remove the square brackets
+    api_key='sk-proj-E5T2gGPqU5tXk4PycU2YT3BlbkFJmRbmnHzRiEdjrkODYZyo'  # Remove the square brackets
 )
 
 def get_completion(prompt):
