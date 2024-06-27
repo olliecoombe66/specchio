@@ -5,21 +5,21 @@ from dotenv import load_dotenv
 import os
 from openai import OpenAI
 
+#get environment variables
 load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-print(SECRET_KEY)
-print(OPENAI_API_KEY)
+# Initialize OpenAI client
+client = OpenAI(
+    api_key=OPENAI_API_KEY) # Remove the square brackets
 
-
+#Set up databases
 app = Flask(__name__, static_url_path='/static')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///conversations.db'
 app.secret_key = SECRET_KEY
 
-# Initialize OpenAI client
-client = OpenAI(
-    api_key='sk-proj-E5T2gGPqU5tXk4PycU2YT3BlbkFJmRbmnHzRiEdjrkODYZyo') # Remove the square brackets
+
 
 # Database setup
 def init_sqlite_db():
@@ -37,6 +37,8 @@ def init_sqlite_db():
 
 init_sqlite_db()
 
+
+#send prompt to Chat GPT
 def get_completion(prompt):
     print(prompt)
     response = client.chat.completions.create(
@@ -55,7 +57,7 @@ def get_completion(prompt):
 
 
 
-@app.route("/", methods=['POST', 'GET'])
+@app.route("/homepage", methods=['POST', 'GET'])
 def query_view():
     if request.method == 'POST':
         prompt = request.form['prompt']
@@ -65,7 +67,7 @@ def query_view():
         return jsonify({'response': response})
     return render_template('index.html')
 
-@app.route('/login/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
