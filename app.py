@@ -57,13 +57,12 @@ def get_completion(prompt):
 
 
 
-@app.route('/homepage', methods=['POST', 'GET'])
+@app.route('/', methods=['POST', 'GET'])
 def query_view():
     if request.method == 'POST':
         prompt = request.form['prompt']
         response = get_completion(prompt)
         print(response)
-
         return jsonify({'response': response})
     return render_template('index.html')
 
@@ -105,7 +104,7 @@ def signup():
 
     return render_template('signup.html')
 
-@app.route('/', methods=['GET'])
+@app.route('/home', methods=['GET'])
 def landingPage():
     return render_template('landing-page.html')
 
