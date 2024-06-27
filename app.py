@@ -57,7 +57,7 @@ def get_completion(prompt):
 
 
 
-@app.route("/homepage", methods=['POST', 'GET'])
+@app.route('/homepage', methods=['POST', 'GET'])
 def query_view():
     if request.method == 'POST':
         prompt = request.form['prompt']
@@ -67,7 +67,7 @@ def query_view():
         return jsonify({'response': response})
     return render_template('index.html')
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/login2', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
@@ -86,8 +86,7 @@ def login():
 
     return render_template('login.html')
 
-
-@app.route('/signup/', methods=['GET', 'POST'])
+@app.route('/signup2', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         username = request.form['username']
@@ -105,6 +104,10 @@ def signup():
             flash('Username already taken')
 
     return render_template('signup.html')
+
+@app.route('/', methods=['GET'])
+def landingPage():
+    return render_template('landing-page.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
