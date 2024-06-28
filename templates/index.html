@@ -35,8 +35,12 @@
                     data: {prompt: prompt},
                     dataType: 'json',
                     success: function(data) {
-                        $('#response').append('<p class="ai-message">('+ time + ') <i class="bi bi-robot"></i>: ' + data.response + '</p>');
+                        var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
+                        $('#response').append('<p class="ai-message">('+ time + ') <i class="bi bi-robot"></i>: ' + formattedResponse + '</p>');
                         $('#response').scrollTop($('#response')[0].scrollHeight);
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error("AJAX error:", textStatus, errorThrown);
                     }
                 });
             });
@@ -51,6 +55,11 @@
                var htmlText = markdown.toHTML(markdownText);
                return htmlText;
            }
+
+           // New JavaScript for collapsible feature
+            $(document).on('click', '.ai-response', function() {
+                $(this).toggleClass('collapsed');
+            });
         });
     </script>
 </head>

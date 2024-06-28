@@ -4,6 +4,7 @@ import sqlite3
 from dotenv import load_dotenv
 import os
 from openai import OpenAI
+import markdown2
 
 #get environment variables
 load_dotenv()
@@ -83,13 +84,12 @@ def query_view2():
 
         # Limit the conversation history to the last 10 messages (adjust as needed)
         session['conversation_history'] = session['conversation_history'][-10:]
+        html_response = markdown2.markdown(response)
 
         # Make sure to mark the session as modified
         session.modified = True
-
-        print(response)
-        print("app route chat")
-        return jsonify({'response': response})
+        return jsonify({'response': html_response})
+        print(html_response)
     return render_template('index.html')
 
 @app.route('/login2', methods=['GET', 'POST'])
