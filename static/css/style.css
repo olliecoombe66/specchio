@@ -16,6 +16,8 @@ html, body {
     overflow-y: auto;
     padding: 15px;
     background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
 }
 
 .prompt-container {
@@ -31,8 +33,8 @@ html, body {
     padding: 10px 15px;
     border-radius: 15px;
     position: relative;
-    display: inline-block;
     word-wrap: break-word;
+    align-self: flex-start; /* Default alignment for AI messages */
 }
 
 .user-message {
@@ -40,15 +42,12 @@ html, body {
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 0;
-    margin-left: auto;
 }
 
 .ai-message {
     background-color: #e9ecef;
     color: black;
-    align-self: flex-start;
     border-bottom-left-radius: 0;
-    margin-right: auto;
 }
 
 .message .time {
@@ -61,6 +60,15 @@ html, body {
 
 .message p {
     margin: 0;
+}
+
+.message-content {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.user-message .message-content {
+    text-align: right;
 }
 
 .user-message p {

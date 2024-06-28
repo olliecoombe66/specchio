@@ -15,11 +15,18 @@
 
           // Function to display a message
           function displayMessage(role, content, time) {
-              var messageClass = (role === 'user') ? 'user-message' : 'ai-message';
-              var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
-              var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
-              $('#response').append('<p class="' + messageClass + '">(' + time + ') <i class="bi ' + icon + '"></i>: ' + formattedContent + '</p>');
-          }
+            var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
+            var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
+            var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
+            $('#response').append(
+                '<div class="' + messageClass + '">' +
+                    '<div class="message-content">' +
+                        '<p><i class="bi ' + icon + '"></i> ' + formattedContent + '</p>' +
+                        '<span class="time">'+ '</span>' +
+                    '</div>' +
+                '</div>'
+            );
+        }
 
           // Load conversation history
           $.ajax({
@@ -48,7 +55,7 @@
                 var prompt = $('#prompt').val();
                 var dateTime = new Date();
                 var time = dateTime.toLocaleTimeString();
-                $('#response').append('<p class="user-message">('+ time + ') <i class="bi bi-person"></i>: ' + prompt + '</p>');
+                $('#response').append('<div class ="message user-message"<p class="user-message"><i class="bi bi-person"></i>: ' + prompt + '</p></div>');
                 $('#prompt').val('');
                 $.ajax({
                     url: '/chat',
@@ -56,10 +63,10 @@
                     data: {prompt: prompt},
                     dataType: 'json',
                     success: function(data) {
-                        var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
-                        $('#response').append('<p class="ai-message">('+ time + ') <i class="bi bi-robot"></i>: ' + formattedResponse + '</p>');
-                        $('#response').scrollTop($('#response')[0].scrollHeight);
-                    },
+                      var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
+                      displayMessage('assistant', formattedResponse, new Date().toLocaleTimeString());
+                      $('#response').scrollTop($('#response')[0].scrollHeight);
+                  },
                     error: function(jqXHR, textStatus, errorThrown) {
                         console.error("AJAX error:", textStatus, errorThrown);
                     }
@@ -86,8 +93,8 @@
 </head>
 <body>
     <div class="container-fluid chat-container p-3">
-        <h3>Your career coach</h3>
-        <div id="response" class="mb-3"></div>
+    <h3>Your career coach</h3>
+    <div id="response" class="mb-3"></div>
 
         <div class="mb-3">
             <h6>What I can help with</h6>
