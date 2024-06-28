@@ -38,15 +38,21 @@ def init_sqlite_db():
 init_sqlite_db()
 
 
-#send prompt to Chat GPT
-def get_completion(prompt):
-    print(prompt)
+# Modify the get_completion function
+def get_completion(prompt, conversation_history):
+    messages = [
+        {"role": "system", "content": "You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."}
+    ]
+
+    # Add conversation history
+    messages.extend(conversation_history)
+
+    # Add the new user message
+    messages.append({"role": "user", "content": prompt})
+
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a dedicated career coach who is passionate about supporting individuals in their career development journey. Your coaching style is supportive and motivational, focusing on guiding clients through introspection and actionable steps. You believe in asking one thoughtful question at a time to deeply explore their goals and challenges. Imagine you are in a coaching session with a client who is seeking career guidance. Begin by asking them a reflective question to understand their current career situation and aspirations. Follow up with additional questions as needed to delve deeper into their concerns and ambitions. After a few questions, summarize the key points discussed and outline a concise action plan to help them move forward effectively. Your goal is to inspire and empower your client, providing practical insights and encouragement throughout the coaching process. Your responses should be insightful, empathetic, and geared towards fostering their career growth."},
-            {"role": "user", "content": prompt}
-        ],
+        messages=messages,
         max_tokens=1024,
         n=1,
         stop=None,
@@ -55,14 +61,34 @@ def get_completion(prompt):
     return response.choices[0].message.content
 
 
-
-
 @app.route('/', methods=['POST', 'GET'])
 def query_view():
+    return render_template('landing-page.html')
+
+
+@app.route('/chat', methods=['POST', 'GET'])
+def query_view2():
+    if 'conversation_history' not in session:
+        session['conversation_history'] = []
+
     if request.method == 'POST':
         prompt = request.form['prompt']
-        response = get_completion(prompt)
+
+        # Get the response from ChatGPT
+        response = get_completion(prompt, session['conversation_history'])
+
+        # Update the conversation history
+        session['conversation_history'].append({"role": "user", "content": prompt})
+        session['conversation_history'].append({"role": "assistant", "content": response})
+
+        # Limit the conversation history to the last 10 messages (adjust as needed)
+        session['conversation_history'] = session['conversation_history'][-10:]
+
+        # Make sure to mark the session as modified
+        session.modified = True
+
         print(response)
+        print("app route chat")
         return jsonify({'response': response})
     return render_template('index.html')
 
@@ -79,7 +105,7 @@ def login():
 
         if user and check_password_hash(user[2], password):
             session['username'] = username
-            return redirect(url_for('query_view'))
+            return redirect(url_for('query_view2'))
         else:
             flash('Invalid username or password')
 
@@ -107,6 +133,8 @@ def signup():
 @app.route('/home', methods=['GET'])
 def landingPage():
     return render_template('landing-page.html')
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

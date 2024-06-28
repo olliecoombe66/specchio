@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
 
     <script>
         $(document).ready(function() {
@@ -27,15 +27,15 @@
                 var prompt = $('#prompt').val();
                 var dateTime = new Date();
                 var time = dateTime.toLocaleTimeString();
-                $('#response').append('<p class="user-message"> <i class="bi bi-person"></i>: ' + prompt + '</p>');
+                $('#response').append('<p class="user-message">('+ time + ') <i class="bi bi-person"></i>: ' + prompt + '</p>');
                 $('#prompt').val('');
                 $.ajax({
-                    url: '/',
+                    url: '/chat',
                     type: 'POST',
                     data: {prompt: prompt},
                     dataType: 'json',
                     success: function(data) {
-                        $('#response').append('<p class="ai-message"><i class="bi bi-robot"></i>: ' + data.response + '</p>');
+                        $('#response').append('<p class="ai-message">('+ time + ') <i class="bi bi-robot"></i>: ' + data.response + '</p>');
                         $('#response').scrollTop($('#response')[0].scrollHeight);
                     }
                 });
@@ -69,7 +69,7 @@
         </div>
 
         <div class="prompt-container">
-            <form method="post" action="">
+            <form method="post" action="/chat">
                 <div class="input-group">
                     <textarea class="form-control" id="prompt" name="prompt" rows="3" placeholder="Enter your prompt here..."></textarea>
                     <button class="btn btn-primary" type="submit">Submit</button>
