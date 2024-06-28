@@ -12,6 +12,27 @@
 
     <script>
         $(document).ready(function() {
+
+          // Function to display a message
+          function displayMessage(role, content, time) {
+              var messageClass = (role === 'user') ? 'user-message' : 'ai-message';
+              var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
+              var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
+              $('#response').append('<p class="' + messageClass + '">(' + time + ') <i class="bi ' + icon + '"></i>: ' + formattedContent + '</p>');
+          }
+
+          // Load conversation history
+          $.ajax({
+              url: '/get_conversation_history',
+              type: 'GET',
+              success: function(data) {
+                  data.history.forEach(function(message) {
+                      displayMessage(message.role, message.content, new Date(message.timestamp).toLocaleTimeString());
+                  });
+                  $('#response').scrollTop($('#response')[0].scrollHeight);
+              }
+          });
+
             $('#prompt').keypress(function(event) {
                 if (event.keyCode === 13 && !event.shiftKey) {
                     event.preventDefault();

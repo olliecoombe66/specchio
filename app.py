@@ -20,7 +20,13 @@ app = Flask(__name__, static_url_path='/static')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///conversations.db'
 app.secret_key = SECRET_KEY
 
-
+def save_message(user_id, role, content):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO conversations (user_id, role, content) VALUES (?, ?, ?)',
+                   (user_id, role, content))
+    conn.commit()
+    conn.close()
 
 # Database setup
 def init_sqlite_db():
@@ -33,10 +39,38 @@ def init_sqlite_db():
             password TEXT NOT NULL
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER,
+            role TEXT,
+            content TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
     conn.commit()
     conn.close()
 
 init_sqlite_db()
+
+
+def load_conversation_history(user_id, limit=10):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT role, content FROM conversations
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+        LIMIT ?
+    ''', (user_id, limit))
+    messages = cursor.fetchall()
+    conn.close()
+
+    # Reverse the order to get chronological order
+    messages.reverse()
+
+    return [{"role": role, "content": content} for role, content in messages]
 
 
 # Modify the get_completion function
@@ -75,17 +109,25 @@ def query_view2():
     if request.method == 'POST':
         prompt = request.form['prompt']
 
+        # Save user message
+        save_message(session['user_id'], 'user', prompt)
+
         # Get the response from ChatGPT
         response = get_completion(prompt, session['conversation_history'])
+
+        # Save assistant message
+        save_message(session['user_id'], 'assistant', response)
+
 
         # Update the conversation history
         session['conversation_history'].append({"role": "user", "content": prompt})
         session['conversation_history'].append({"role": "assistant", "content": response})
 
         # Limit the conversation history to the last 10 messages (adjust as needed)
-        session['conversation_history'] = session['conversation_history'][-10:]
+        session['conversation_history'] = session['conversation_history'][-100:]
         html_response = markdown2.markdown(response)
-
+        history = load_conversation_history(session['user_id'])
+        print(history)
         # Make sure to mark the session as modified
         session.modified = True
         return jsonify({'response': html_response})
@@ -104,7 +146,9 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[2], password):
+            session['user_id'] = user[0]
             session['username'] = username
+            session['conversation_history'] = load_conversation_history(user[0])
             return redirect(url_for('query_view2'))
         else:
             flash('Invalid username or password')
@@ -134,6 +178,12 @@ def signup():
 def landingPage():
     return render_template('landing-page.html')
 
+@app.route('/get_conversation_history')
+def get_conversation_history():
+    if 'user_id' not in session:
+        return jsonify({'history': []})
+    history = load_conversation_history(session['user_id'])
+    return jsonify({'history': history})
 
 
 if __name__ == "__main__":
