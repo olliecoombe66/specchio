@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='/assets/css/signup.css') }}">
+    <style>
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h2>Sign Up</h2>
-        <form method="POST" action="{{ url_for('signup') }}">
+        <form method="POST" action="{{ url_for('signup') }}" onsubmit="return validateForm()">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
@@ -18,6 +25,12 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
+            <div class="form-group">
+                <label for="password-confirm">Confirm Password</label>
+                <input type="password" id="password-confirm" name="password-confirm" required>
+            </div>
+            <div id="password-error" class="error-message"></div>
+            <br>
             <button type="submit" class="btn">Sign Up</button>
         </form>
         <p>Already have an account? <a href="{{ url_for('login') }}">Log in here</a>.</p>
@@ -31,5 +44,31 @@
           {% endif %}
         {% endwith %}
     </div>
+
+    <script>
+        function validateForm() {
+            var password = document.getElementById("password").value;
+            var confirmPassword = document.getElementById("password-confirm").value;
+            var passwordError = document.getElementById("password-error");
+
+            // Check if passwords match
+            if (password !== confirmPassword) {
+                passwordError.innerText = "Passwords do not match.";
+                return false;
+            }
+
+            // Check if password is secure enough (example: at least 8 characters)
+            if (password.length < 6) {
+                passwordError.innerText = "Password must be at least 8 characters long.";
+                return false;
+            }
+
+            // Additional checks for password security can be added here as needed
+
+            // Clear any previous error messages if validation passes
+            passwordError.innerText = "";
+            return true;
+        }
+    </script>
 </body>
 </html>
