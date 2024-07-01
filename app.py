@@ -54,7 +54,6 @@ def init_sqlite_db():
 
 init_sqlite_db()
 
-
 def load_conversation_history(user_id, limit=10):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -70,7 +69,7 @@ def load_conversation_history(user_id, limit=10):
     # Reverse the order to get chronological order
     messages.reverse()
 
-    return [{"role": role, "content": content} for role, content in messages]
+    return [{"role": role, "content": markdown2.markdown(content)} for role, content in messages]
 
 
 # Modify the get_completion function
@@ -126,9 +125,7 @@ def query_view2():
         # Limit the conversation history to the last 10 messages (adjust as needed)
         session['conversation_history'] = session['conversation_history'][-100:]
         html_response = markdown2.markdown(response)
-        history = load_conversation_history(session['user_id'])
-        print(history)
-        # Make sure to mark the session as modified
+        history = load_conversation_history(session['user_id'])        # Make sure to mark the session as modified
         session.modified = True
         return jsonify({'response': html_response})
         print(html_response)

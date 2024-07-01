@@ -9,36 +9,46 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
     <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
+    <style>
+        .spinner-border {
+            display: none;
+            width: 3rem;
+            height: 3rem;
+            border-width: .2em;
+        }
+        .loading .spinner-border {
+            display: inline-block;
+        }
+    </style>
 
     <script>
         $(document).ready(function() {
+            // Function to display a message
+            function displayMessage(role, content, time) {
+                var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
+                var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
+                var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
+                $('#response').append(
+                    '<div class="' + messageClass + '">' +
+                        '<div class="message-content">' +
+                            '<p><i class="bi ' + icon + '"></i> ' + formattedContent + '</p>' +
+                            '<span class="time">'+ '</span>' +
+                        '</div>' +
+                    '</div>'
+                );
+            }
 
-          // Function to display a message
-          function displayMessage(role, content, time) {
-            var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
-            var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
-            var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
-            $('#response').append(
-                '<div class="' + messageClass + '">' +
-                    '<div class="message-content">' +
-                        '<p><i class="bi ' + icon + '"></i> ' + formattedContent + '</p>' +
-                        '<span class="time">'+ '</span>' +
-                    '</div>' +
-                '</div>'
-            );
-        }
-
-          // Load conversation history
-          $.ajax({
-              url: '/get_conversation_history',
-              type: 'GET',
-              success: function(data) {
-                  data.history.forEach(function(message) {
-                      displayMessage(message.role, message.content, new Date(message.timestamp).toLocaleTimeString());
-                  });
-                  $('#response').scrollTop($('#response')[0].scrollHeight);
-              }
-          });
+            // Load conversation history
+            $.ajax({
+                url: '/get_conversation_history',
+                type: 'GET',
+                success: function(data) {
+                    data.history.forEach(function(message) {
+                        displayMessage(message.role, message.content, new Date(message.timestamp).toLocaleTimeString());
+                    });
+                    $('#response').scrollTop($('#response')[0].scrollHeight);
+                }
+            });
 
             $('#prompt').keypress(function(event) {
                 if (event.keyCode === 13 && !event.shiftKey) {
@@ -46,6 +56,7 @@
                     $('form').submit();
                 }
             });
+
             $('form').on('submit', function(event) {
                 event.preventDefault();
                 var csrftoken = Cookies.get('csrftoken');
@@ -55,20 +66,25 @@
                 var prompt = $('#prompt').val();
                 var dateTime = new Date();
                 var time = dateTime.toLocaleTimeString();
-                $('#response').append('<div class ="message user-message"<p class="user-message"><i class="bi bi-person"></i>: ' + prompt + '</p></div>');
+                $('#response').append('<div class="message user-message"><p class="user-message"><i class="bi bi-person"></i>: ' + prompt + '</p></div>');
                 $('#prompt').val('');
+                $('#response').append('<div class="message ai-message loading"><div class="message-content"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div></div>');
+                $('#response').scrollTop($('#response')[0].scrollHeight);
+
                 $.ajax({
                     url: '/chat',
                     type: 'POST',
                     data: {prompt: prompt},
                     dataType: 'json',
                     success: function(data) {
-                      var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
-                      displayMessage('assistant', formattedResponse, new Date().toLocaleTimeString());
-                      $('#response').scrollTop($('#response')[0].scrollHeight);
-                  },
+                        $('.loading').remove(); // Remove the loading spinner
+                        var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
+                        displayMessage('assistant', formattedResponse, new Date().toLocaleTimeString());
+                        $('#response').scrollTop($('#response')[0].scrollHeight);
+                    },
                     error: function(jqXHR, textStatus, errorThrown) {
                         console.error("AJAX error:", textStatus, errorThrown);
+                        $('.loading').remove(); // Remove the loading spinner on error
                     }
                 });
             });
@@ -109,8 +125,6 @@
 
             </ul>
         </div>
-
-
 
         <div class="prompt-container">
             <form method="post" action="/chat">
