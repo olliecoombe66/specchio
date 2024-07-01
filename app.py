@@ -185,6 +185,12 @@ def get_conversation_history():
     history = load_conversation_history(session['user_id'])
     return jsonify({'history': history})
 
+@app.route('/logout')
+def logout():
+    # Clear the session data
+    session.clear()
+    flash('You have been logged out successfully.')
+    return redirect(url_for('login'))
 
 if __name__ == "__main__":
     app.run(debug=True)
