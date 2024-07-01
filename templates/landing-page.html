@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Specchio Homepage</title>
+  <title>Samurai Homepage</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -68,12 +68,13 @@
       <div class="container">
         <div class="row justify-content-center" data-aos="zoom-out">
           <div class="col-xl-7 col-lg-9 text-center">
-            <h1>Specchio</h1>
-            <h2>Supercharge your career with an AI coach</h2>
+            <h1>Samurai: an AI Career Coach that creates a plan for your career</h1>
+            <h2></h2>
+            <h3>AI that learns about you and builds an action plan to step up in your career</h3>
           </div>
         </div>
         <div class="text-center" data-aos="zoom-out" data-aos-delay="100">
-          <a href="{{ url_for('signup') }}" class="btn-get-started">Sign up</a>
+          <a href="{{ url_for('signup') }}" class="btn-get-started">Get started</a>
         </div>
 
         <div class="row gy-4 mt-5">
@@ -89,7 +90,7 @@
             <div class="icon-box">
               <div class="icon"><i class="bi bi-gem"></i></div>
               <h4 class="title"><a href="">Regular check-ins</a></h4>
-              <p class="description">Specchio schedules regular check-ins to support you throughout your career</p>
+              <p class="description">Samurai schedules regular check-ins to support you throughout your career</p>
             </div>
           </div><!--End Icon Box -->
 
@@ -97,7 +98,7 @@
             <div class="icon-box">
               <div class="icon"><i class="bi bi-geo-alt"></i></div>
               <h4 class="title"><a href="">Create a development plan</a></h4>
-              <p class="description">Specchio will ensure you continue to develop and learn</p>
+              <p class="description">Samurai will ensure you continue to develop and learn</p>
             </div>
           </div><!--End Icon Box -->
 
@@ -105,7 +106,7 @@
             <div class="icon-box">
               <div class="icon"><i class="bi bi-command"></i></div>
               <h4 class="title"><a href="">On your side</a></h4>
-              <p class="description">Specchio is completely confidential and always has your back</p>
+              <p class="description">Samurai is completely confidential and always has your back</p>
             </div>
           </div><!--End Icon Box -->
 
@@ -115,7 +116,101 @@
     </section><!-- /Hero Section -->
 
 
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="testimonials section">
 
+      <!-- Section Title -->
+      <div class="container section-title" data-aos="fade-up">
+        <h2>Testimonials</h2>
+        <p>What our users say!</p>
+      </div><!-- End Section Title -->
+
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+
+        <div class="swiper init-swiper" data-speed="600" data-delay="5000" data-breakpoints="{ &quot;320&quot;: { &quot;slidesPerView&quot;: 1, &quot;spaceBetween&quot;: 40 }, &quot;1200&quot;: { &quot;slidesPerView&quot;: 3, &quot;spaceBetween&quot;: 40 } }">
+          <script type="application/json" class="swiper-config">
+            {
+              "loop": true,
+              "speed": 600,
+              "autoplay": {
+                "delay": 5000
+              },
+              "slidesPerView": "auto",
+              "pagination": {
+                "el": ".swiper-pagination",
+                "type": "bullets",
+                "clickable": true
+              },
+              "breakpoints": {
+                "320": {
+                  "slidesPerView": 1,
+                  "spaceBetween": 40
+                },
+                "1200": {
+                  "slidesPerView": 3,
+                  "spaceBetween": 20
+                }
+              }
+            }
+          </script>
+          <div class="swiper-wrapper">
+
+            <div class="swiper-slide">
+              <div class="testimonial-item" "="">
+            <p>
+              <i class="bi bi-quote quote-icon-left"></i>
+                <span>CareerSamurai guided me from academia to industry seamlessly. It tailored learning paths and connected me with relevant job opportunities in AI.</span>
+                <i class="bi bi-quote quote-icon-right"></i>
+                </p>
+                <img src="assets/img/testimonials/testimonials-1.jpg" class="testimonial-img" alt="">
+                <h3>Emily Zhang</h3>
+                <h4>Data Scientist</h4>
+              </div>
+            </div><!-- End testimonial item -->
+
+            <div class="swiper-slide">
+              <div class="testimonial-item">
+                <p>
+                  <i class="bi bi-quote quote-icon-left"></i>
+                  <span>As a marketing professional, CareerSamurai guided me in enhancing my digital skills and networking within the industry. It's been instrumental in my career growth.""
+</span>
+                  <i class="bi bi-quote quote-icon-right"></i>
+                </p>
+                <img src="assets/img/testimonials/testimonials-2.jpg" class="testimonial-img" alt="">
+                <h3>David Lee</h3>
+                <h4>Marketing Executive</h4>
+              </div>
+            </div><!-- End testimonial item -->
+
+            <div class="swiper-slide">
+              <div class="testimonial-item">
+                <p>
+                  <i class="bi bi-quote quote-icon-left"></i>
+                  <span>CareerSamurai provided strategic insights and professional development tips that elevated my consulting practice. Highly recommend it for business professionals.
+</span>
+                  <i class="bi bi-quote quote-icon-right"></i>
+                </p>
+                <img src="assets/img/testimonials/testimonials-3.jpg" class="testimonial-img" alt="">
+                <h3>Ella Smith</h3>
+                <h4>Consultant</h4>
+              </div>
+
+            </div><!-- End testimonial item -->
+
+          </div>
+          <div class="swiper-pagination"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+          <div class="swiper-pagination"></div>
+        </div>
+
+      </div>
+
+    </section>
 
   </main>
 
@@ -124,9 +219,9 @@
       <div class="row gy-4">
         <div class="col-lg-12 col-md-12 footer-about">
           <a href="index.html" class="logo d-flex align-items-center">
-            <span class="sitename">Specchio</span>
+            <span class="sitename"></span>
           </a>
-          <p>Unlock your potential with Specchio, your dedicated AI career coach. Our AI-driven platform provides personalized career guidance, resume building, interview preparation, and skill enhancement tailored to your unique aspirations.</p>
+          <p>Unlock your potential with Samurai, your dedicated AI career coach. Samurai is an AI-driven career coach that leanrs from you to help provide personalized career guidance, resume building, interview preparation, and skill enhancement tailored to your unique aspirations.</p>
           <div class="social-links d-flex mt-4">
             <a href=""><i class="bi bi-twitter-x"></i></a>
             <a href=""><i class="bi bi-facebook"></i></a>
@@ -138,7 +233,7 @@
     </div>
 
     <div class="container copyright text-center mt-4">
-      <p>© <span>Copyright</span> <strong class="px-1 sitename">Specchio</strong> <span>All Rights Reserved</span></p>
+      <p>© <span>Copyright</span> <strong class="px-1 sitename">Samurai</strong> <span>All Rights Reserved</span></p>
       <div class="credits">
         <!-- All the links in the footer should remain intact. -->
         <!-- You can delete the links only if you've purchased the pro version. -->

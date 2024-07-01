@@ -11,6 +11,16 @@ html, body {
     height: 100vh;
 }
 
+.btn {
+  background-color: #A96DC2;
+
+}
+
+.btn:hover {
+    background-color: #450E43;
+}
+
+
 #response {
     flex-grow: 1;
     overflow-y: auto;
@@ -38,7 +48,7 @@ html, body {
 }
 
 .user-message {
-    background-color: #007bff;
+    background-color: #A96DC2;
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 0;
@@ -48,14 +58,6 @@ html, body {
     background-color: #e9ecef;
     color: black;
     border-bottom-left-radius: 0;
-}
-
-.message .time {
-    display: block;
-    font-size: 0.8em;
-    color: #666;
-    text-align: right;
-    margin-top: 5px;
 }
 
 .message p {
@@ -92,3 +94,16 @@ html, body {
     padding: 10px 0;
     cursor: pointer;
 }
+
+
+
+.spinner-border {
+        display: none;
+        width: 3rem;
+        height: 3rem;
+        border-width: .2em;
+    }
+.loading .spinner-border {
+        display: inline-block;
+        color: A96DC2;
+    }
