@@ -196,6 +196,7 @@ def query_view2(session_id=None):
         html_response = markdown2.markdown(response)
         history = load_conversation_history(session['user_id'], session_id)
         print(history)
+        create_session(user[0], session['session_id'])
         session.modified = True
         return jsonify({'response': html_response})
 
@@ -219,7 +220,7 @@ def login():
             session['session_id'] = generate_session_id()
             session['user_id'] = user[0]
 
-            create_session(user[0], session['session_id'])
+
             session['username'] = username
             session['conversation_history'] = load_conversation_history(user[0], session['session_id'])
 
