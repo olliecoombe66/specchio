@@ -107,3 +107,22 @@ html, body {
         display: inline-block;
         color: A96DC2;
     }
+
+#sessionsPanel {
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid #ccc;
+  padding: 15px;
+}
+
+.session-item {
+  cursor: pointer;
+  padding: 10px;
+  margin-bottom: 5px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.session-item:hover {
+  background-color: #e9ecef;
+}

@@ -17,6 +17,10 @@
     <div class="container">
         <h2>Sign Up</h2>
         <form method="POST" action="{{ url_for('signup') }}" onsubmit="return validateForm()">
+          <div class="form-group">
+              <label for="username">Preferred name</label>
+              <input type="text" id="name" name="name" required>
+          </div>
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
