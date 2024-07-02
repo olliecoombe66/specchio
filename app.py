@@ -85,13 +85,49 @@ def create_session(user_id, session_id):
     conn.close()
 
 
+def update_session_summary(session_id, summary):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        # Check if the session exists
+        cursor.execute('SELECT id FROM sessions WHERE session_id = ?', (session_id,))
+        session = cursor.fetchone()
+
+        if session:
+            # If session exists, update the summary
+            cursor.execute('UPDATE sessions SET summary = ? WHERE session_id = ?', (summary, session_id))
+        else:
+            # If session doesn't exist, insert new row (this shouldn't happen if sessions are created properly)
+            cursor.execute('INSERT INTO sessions (session_id, summary) VALUES (?, ?)', (session_id, summary))
+
+        conn.commit()
+        print(f"Summary updated for session {session_id}")
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+def generate_summary(conversation_history, max_length=50):
+    # Combine all messages into one string
+    full_conversation = " ".join([msg['content'] for msg in conversation_history])
+
+    # Take the first `max_length` characters
+    summary = full_conversation[:max_length]
+
+    # Add ellipsis if the summary was truncated
+    if len(full_conversation) > max_length:
+        summary += "..."
+
+    return summary
+
 def get_session_ids(user_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT session_id FROM sessions WHERE user_id = ?', (user_id,))
-    session_ids = cursor.fetchall()
+    cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ?', (user_id,))
+    sessions= cursor.fetchall()
     conn.close()
-    return [session_id[0] for session_id in session_ids]
+    print()
+    return [(session[0], session[1]) for session in sessions]
 
 def get_user_name(user_id):
     # Establish a connection to the SQLite database
@@ -180,11 +216,10 @@ def query_view2(session_id=None):
         session['session_id'] = session_id  # Update session_id in session
 
     session_ids = get_session_ids(user_id)
+    print("Sumamries")
     print(session_ids)
 
     if request.method == 'POST':
-        print("help2")
-        print(session_id)
         prompt = request.form['prompt']
 
         # Save user message
@@ -204,8 +239,13 @@ def query_view2(session_id=None):
         session['conversation_history'] = session['conversation_history'][-100:]
         html_response = markdown2.markdown(response)
         history = load_conversation_history(session['user_id'], session_id)
-        print(history)
         create_session(user_id, session['session_id'])
+
+        #update summary
+        conversation_history = load_conversation_history(session['user_id'], session_id)
+        summary = generate_summary(conversation_history)
+        update_session_summary(session_id, summary)
+
         session.modified = True
         return jsonify({'response': html_response})
 
@@ -246,7 +286,6 @@ def signup():
         username = request.form['username']
         password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
         name = request.form['name']
-
 
         try:
             conn = sqlite3.connect('database.db')

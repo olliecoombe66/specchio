@@ -115,9 +115,13 @@
   <h4>Previous Sessions</h4>
   <div id="sessionsList">
     <ul>
-           {% for session_id in session_ids %}
-           <li><a href="{{ url_for('query_view2', session_id=session_id) }}">{{ session_id }}</a></li>
-           {% endfor %}
+      {% for session_id, summary in session_ids %}
+   <li>
+       <a href="{{ url_for('query_view2', session_id=session_id) }}">
+           {{ summary | striptags | truncate(50, true, '...') }}
+       </a>
+   </li>
+{% endfor %}
        </ul></div>
 </div>
 <div class="col-md-9">
