@@ -68,13 +68,22 @@ def init_sqlite_db():
 
 init_sqlite_db()
 
-#create sessions
+#create sessions (only if not already there)
 def create_session(user_id, session_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO sessions (user_id, session_id) VALUES (?, ?)', (user_id, session_id))
-    conn.commit()
+
+    # First, check if a session already exists for this user
+    cursor.execute('SELECT session_id FROM sessions WHERE user_id = ?', (user_id,))
+    existing_session = cursor.fetchone()
+
+    if not existing_session:
+        # If no session exists, create a new one
+        cursor.execute('INSERT INTO sessions (user_id, session_id) VALUES (?, ?)', (user_id, session_id))
+        conn.commit()
+
     conn.close()
+
 
 def get_session_ids(user_id):
     conn = sqlite3.connect('database.db')
@@ -196,7 +205,7 @@ def query_view2(session_id=None):
         html_response = markdown2.markdown(response)
         history = load_conversation_history(session['user_id'], session_id)
         print(history)
-        create_session(user[0], session['session_id'])
+        create_session(user_id, session['session_id'])
         session.modified = True
         return jsonify({'response': html_response})
 
