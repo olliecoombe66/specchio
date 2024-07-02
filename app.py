@@ -318,7 +318,11 @@ def logout():
     flash('You have been logged out successfully.')
     return redirect(url_for('query_view'))
 
-
+@app.route('/new_session', methods=['POST', 'GET'])
+def new_session():
+    session['session_id'] = generate_session_id()
+    # Optionally, you can save this session ID to your database or perform other actions
+    return jsonify({'redirect_url': url_for('query_view2', session_id=session['session_id'])})
 
 
 if __name__ == "__main__":

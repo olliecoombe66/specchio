@@ -46,6 +46,24 @@
                 }
             });
 
+            // Handle click event for "Create New Session" button
+           $('#newSessionButton').on('click', function(event) {
+               event.preventDefault();  // Prevent default form submission
+
+               // Make AJAX request to /new_session
+               $.ajax({
+                url: '/new_session',
+                type: 'POST',
+                dataType: 'json',  // Ensure this is set correctly
+                success: function(response) {
+                    window.location.href = response.redirect_url;
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error("AJAX error:", textStatus, errorThrown);
+    }
+});
+           });
+
             $('form').on('submit', function(event) {
                 event.preventDefault();
                 var csrftoken = Cookies.get('csrftoken');
@@ -119,11 +137,18 @@
    <li>
        <a href="{{ url_for('query_view2', session_id=session_id) }}">
            {{ summary | striptags | truncate(50, true, '...') }}
-       </a>
+         </a>
    </li>
 {% endfor %}
-       </ul></div>
+       </ul>
+     </div>
+     <form id="newSessionForm">
+   <button id="newSessionButton" class="btn btn-primary" type="button">Create New Session</button>
+</form>
 </div>
+
+
+
 <div class="col-md-9">
   <!-- Existing chat container content -->
   <div class="container-fluid chat-container p-3">
