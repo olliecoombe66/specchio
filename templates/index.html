@@ -11,21 +11,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
 
     <script>
-        $(document).ready(function() {
-            // Function to display a message
-            function displayMessage(role, content, time) {
-                var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
-                var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
-                var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
-                $('#response').append(
-                    '<div class="' + messageClass + '">' +
-                        '<div class="message-content">' +
-                            '<p><i class="bi ' + icon + '"></i> ' + formattedContent + '</p>' +
-                            '<span class="time">'+ '</span>' +
-                        '</div>' +
-                    '</div>'
-                );
-            }
+      $(document).ready(function() {
+          // Function to display a message
+          function displayMessage(role, content, time) {
+              var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
+              var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
+              var messageSender = (role === 'user') ? "You" : "SamAI";
+              var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
+              $('#response').append(
+                  '<div class="' + messageClass + '">' +
+                      '<div class="message-content">' +
+                          '<p><i class="bi ' + '"></i><b> ' + messageSender + '</b> ' + formattedContent + '</p>' +
+                      '</div>' +
+                  '</div>'
+              );
+          }
 
             // Load conversation history
             $.ajax({
@@ -111,19 +111,20 @@
 </nav>
 <div class="container-fluid">
 <div class="row">
-<div class="col-md-3" id="sessionsPanel">
-  <h4>Previous Sessions</h4>
-  <div id="sessionsList">
-    <ul>
-      {% for session_id, summary in session_ids %}
-   <li>
-       <a href="{{ url_for('query_view2', session_id=session_id) }}">
-           {{ summary | striptags | truncate(50, true, '...') }}
-       </a>
-   </li>
-{% endfor %}
-       </ul></div>
-</div>
+  <div class="col-md-3" id="sessionsPanel">
+    <h4>Previous Sessions</h4>
+    <div id="sessionsList">
+      <ul>
+        {% for session_id, summary in session_ids %}
+          <li>
+            <a href="{{ url_for('query_view2', session_id=session_id) }}">
+              {{ summary | striptags | truncate(50, true, '...') }}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
 
 
 
@@ -137,7 +138,10 @@
           <h6>What I can help with</h6>
           <ul class="list-group">
               <li class="list-group-item"><a href="#" class="example-prompt">Help me prepare for a 1:1</a></li>
-              <li class="list-group-item"><a href="#" class="example-prompt">Help me develop a personal development plan</a></li>
+              <li class="list-group-item"><a href="#" class="example-prompt">Create a plan to develop my skills</a></li>
+              <li class="list-group-item"><a href="#" class="example-prompt">Interview Preparation</a></li>
+              <li class="list-group-item"><a href="#" class="example-prompt">Set goals</a></li>
+
 
           </ul>
       </div>
