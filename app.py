@@ -13,6 +13,12 @@ from datetime import datetime as dt, timedelta
 load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+MAIL_SERVER = os.getenv('MAIL_SERVER')
+MAIL_PORT = os.getenv('MAIL_PORT')
+MAIL_USE_TLS = os.getenv('MAIL_USE_TLS')
+MAIL_USERNAME = os.getenv('MAIL_USERNAME')
+MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
+
 
 # Initialize OpenAI client
 client = OpenAI(
@@ -24,11 +30,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///conversations.db'
 app.secret_key = SECRET_KEY
 
 
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'olliecoombe@gmail.com'
-app.config['MAIL_PASSWORD'] = 'zoxm zbwl yoba jhpu'
+app.config['MAIL_SERVER'] = MAIL_SERVER
+app.config['MAIL_PORT'] = MAIL_PORT
+app.config['MAIL_USE_TLS'] = MAIL_USE_TLS
+app.config['MAIL_USERNAME'] = MAIL_USERNAME
+app.config['MAIL_PASSWORD'] = MAIL_PASSWORD
 
 mail = Mail(app)
 
