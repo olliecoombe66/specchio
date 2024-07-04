@@ -415,7 +415,7 @@ def send_password_reset_email(email, token):
     msg.body = f'Hello,\n\nTo reset your password, click on the following link:\n{reset_link}\n\nIf you did not request this, please ignore this email.\n'
     mail.send(msg)
 
-
+#Signup flow
 @app.route('/signup2', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -436,10 +436,12 @@ def signup():
 
     return render_template('signup.html')
 
+#Landing page
 @app.route('/home', methods=['GET'])
 def landingPage():
     return render_template('landing-page.html')
 
+#Get conversation history
 @app.route('/get_conversation_history')
 def get_conversation_history():
     if 'user_id' not in session:
@@ -447,6 +449,7 @@ def get_conversation_history():
     history = load_conversation_history(session['user_id'], session['session_id'])
     return jsonify({'history': history})
 
+#Logout flow
 @app.route('/logout')
 def logout():
     # Clear the session data
@@ -454,7 +457,7 @@ def logout():
     flash('You have been logged out successfully.')
     return redirect(url_for('query_view'))
 
-
+#Reset password flow
 @app.route('/reset_password', methods=['GET', 'POST'])
 def reset_password_request():
     if request.method == 'POST':
@@ -473,6 +476,7 @@ def reset_password_request():
 
     return render_template('reset_password.html')
 
+#Creates token for reset password
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     user = get_user_by_reset_token(token)
@@ -492,12 +496,15 @@ def reset_password(token):
 
     return render_template('reset_password_form.html', token=token)
 
-@app.route('/new_session', methods=['POST', 'GET'])
+#Creates new sessions
+@app.route('/new_session', methods=['POST'])
 def new_session():
     session['session_id'] = generate_session_id()
-    # Optionally, you can save this session ID to your database or perform other actions
-    return jsonify({'redirect_url': url_for('query_view2', session_id=session['session_id'])})
-
+    new_session_id = session['session_id']
+    return jsonify({
+        'session_id': new_session_id,
+        'redirect_url': url_for('query_view2', session_id=new_session_id)
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)

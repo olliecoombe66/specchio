@@ -78,6 +78,30 @@
                 });
             });
 
+            $('#newConversationBtn').on('click', function() {
+      $.ajax({
+          url: '/new_session',
+          type: 'POST',
+          success: function(data) {
+            console.log("Redirect URL:", data.redirect_url);
+              // Clear the chat area
+              $('#response').empty();
+
+              // Clear the input field
+              $('#prompt').val('');
+
+              // Update the URL without reloading the page
+              history.pushState({}, '', data.redirect_url);
+
+              // Optionally, you can reload the page to ensure everything is reset
+              // window.location.href = data.redirect_url;
+          },
+          error: function(jqXHR, textStatus, errorThrown) {
+              console.error("Error starting new conversation:", textStatus, errorThrown);
+          }
+      });
+  });
+
             $('.example-prompt').on('click', function(e) {
                 e.preventDefault();
                 $('#prompt').val($(this).text());
@@ -111,7 +135,10 @@
 </nav>
 <div class="container-fluid">
 <div class="row">
+
   <div class="col-md-3" id="sessionsPanel">
+    <button id="newConversationBtn" class="btn btn-primary mb-3">Add New Conversation</button>
+
     <h4>Previous Sessions</h4>
     <div id="sessionsList">
       <ul>
