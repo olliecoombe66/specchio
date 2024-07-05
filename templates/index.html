@@ -17,6 +17,10 @@
       $(document).ready(function() {
           // Function to display a message
           function displayMessage(role, content, time) {
+            if (showInitialPrompts) {
+  $('.mb-3:has(.example-prompt)').hide();
+  showInitialPrompts = false;
+}
               var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
               var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
               var messageSender = (role === 'user') ? "You" : "SamAI";
@@ -35,12 +39,18 @@
                 url: '/get_conversation_history',
                 type: 'GET',
                 success: function(data) {
+                    if (data.history.length > 0) {
+                        $('.mb-3:has(.example-prompt)').hide();
+                        showInitialPrompts = false;
+                    }
                     data.history.forEach(function(message) {
                         displayMessage(message.role, message.content, new Date(message.timestamp).toLocaleTimeString());
                     });
                     $('#response').scrollTop($('#response')[0].scrollHeight);
                 }
             });
+
+            var showInitialPrompts = true;
 
             $('#prompt').keypress(function(event) {
                 if (event.keyCode === 13 && !event.shiftKey) {
@@ -50,7 +60,11 @@
             });
 
             $('form').on('submit', function(event) {
-                event.preventDefault();
+    event.preventDefault();
+                if (showInitialPrompts) {
+                    $('.mb-3:has(.example-prompt)').hide();
+                    showInitialPrompts = false;
+                }
                 var csrftoken = Cookies.get('csrftoken');
                 $.ajaxSetup({
                     headers: { 'X-CSRFToken': csrftoken }
@@ -82,28 +96,22 @@
             });
 
             $('#newConversationBtn').on('click', function() {
-      $.ajax({
-          url: '/new_session',
-          type: 'POST',
-          success: function(data) {
-            console.log("Redirect URL:", data.redirect_url);
-              // Clear the chat area
-              $('#response').empty();
-
-              // Clear the input field
-              $('#prompt').val('');
-
-              // Update the URL without reloading the page
-              history.pushState({}, '', data.redirect_url);
-
-              // Optionally, you can reload the page to ensure everything is reset
-              // window.location.href = data.redirect_url;
-          },
-          error: function(jqXHR, textStatus, errorThrown) {
-              console.error("Error starting new conversation:", textStatus, errorThrown);
-          }
-      });
-  });
+              $.ajax({
+                  url: '/new_session',
+                  type: 'POST',
+                  success: function(data) {
+                      console.log("Redirect URL:", data.redirect_url);
+                      $('#response').empty();
+                      $('#prompt').val('');
+                      $('.mb-3:has(.example-prompt)').show();
+                      showInitialPrompts = true;
+                      history.pushState({}, '', data.redirect_url);
+                  },
+                  error: function(jqXHR, textStatus, errorThrown) {
+                      console.error("Error starting new conversation:", textStatus, errorThrown);
+                  }
+              });
+            });
 
             $('.example-prompt').on('click', function(e) {
                 e.preventDefault();

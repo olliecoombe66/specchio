@@ -313,11 +313,11 @@ def query_view():
 def query_view2(session_id=None):
     if 'conversation_history' not in session:
         session['conversation_history'] = []
-    print("help")
-    print(session_id)
     # Fetch user's name from the database using user_id stored in session
     user_id = session.get('user_id')
     user_name = get_user_name(user_id) if user_id else None
+
+    print(OPENAI_API_KEY)
 
     # Determine the session_id to use
     if session_id is None:
@@ -326,8 +326,6 @@ def query_view2(session_id=None):
         session['session_id'] = session_id  # Update session_id in session
 
     session_ids = get_session_ids(user_id)
-    print("Sumamries")
-    print(session_ids)
 
     if request.method == 'POST':
         prompt = request.form['prompt']
