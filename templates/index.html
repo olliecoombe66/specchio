@@ -5,34 +5,41 @@
     <title>Samurai Chat</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.0/dist/js.cookie.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
+        crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css"
+        integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
     <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
-    <!-- Favicons -->
-    <link href="{{ url_for('static', filename='/assets/img/favicon/favicon.ico') }}" rel="icon">
-    <link href="{{ url_for('static', filename='/assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
+        <!-- Favicons -->
+        <link href="{{ url_for('static', filename='/assets/img/favicon/favicon.ico') }}" rel="icon">
+        <link href="{{ url_for('static', filename='/assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
+
+
+
 
     <script>
       $(document).ready(function() {
           // Function to display a message
-          function displayMessage(role, content, time) {
+            function displayMessage(role, content, time) {
             if (showInitialPrompts) {
   $('.mb-3:has(.example-prompt)').hide();
   showInitialPrompts = false;
 }
-              var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
-              var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
-              var messageSender = (role === 'user') ? "You" : "SamAI";
-              var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
-              $('#response').append(
-                  '<div class="' + messageClass + '">' +
-                      '<div class="message-content">' +
-                          '<p><i class="bi ' + '"></i><b> ' + messageSender + '</b> ' + formattedContent + '</p>' +
-                      '</div>' +
-                  '</div>'
-              );
-          }
+                var messageClass = (role === 'user') ? 'message user-message' : 'message ai-message';
+                var icon = (role === 'user') ? 'bi-person' : 'bi-robot';
+                var messageSender = (role === 'user') ? "You" : "SamAI";
+                var formattedContent = (role === 'assistant') ? '<div class="ai-response">' + content + '</div>' : content;
+                $('#response').append(
+                    '<div class="' + messageClass + '">' +
+                    '<div class="message-content">' +
+                    '<p><i class="bi ' + '"></i><b> ' + messageSender + '</b> ' + formattedContent + '</p>' +
+                    '</div>' +
+                    '</div>'
+                );
+            }
 
             // Load conversation history
             $.ajax({
@@ -60,7 +67,7 @@
             });
 
             $('form').on('submit', function(event) {
-    event.preventDefault();
+                event.preventDefault();
                 if (showInitialPrompts) {
                     $('.mb-3:has(.example-prompt)').hide();
                     showInitialPrompts = false;
@@ -80,118 +87,291 @@
                 $.ajax({
                     url: '/chat',
                     type: 'POST',
-                    data: {prompt: prompt},
+                    data: { prompt: prompt },
                     dataType: 'json',
-                    success: function(data) {
+                    success: function (data) {
                         $('.loading').remove(); // Remove the loading spinner
                         var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
                         displayMessage('assistant', formattedResponse, new Date().toLocaleTimeString());
                         $('#response').scrollTop($('#response')[0].scrollHeight);
                     },
-                    error: function(jqXHR, textStatus, errorThrown) {
+                    error: function (jqXHR, textStatus, errorThrown) {
                         console.error("AJAX error:", textStatus, errorThrown);
                         $('.loading').remove(); // Remove the loading spinner on error
                     }
                 });
             });
 
-            $('#newConversationBtn').on('click', function() {
-              $.ajax({
-                  url: '/new_session',
-                  type: 'POST',
-                  success: function(data) {
-                      console.log("Redirect URL:", data.redirect_url);
-                      $('#response').empty();
-                      $('#prompt').val('');
-                      $('.mb-3:has(.example-prompt)').show();
-                      showInitialPrompts = true;
-                      history.pushState({}, '', data.redirect_url);
-                  },
-                  error: function(jqXHR, textStatus, errorThrown) {
-                      console.error("Error starting new conversation:", textStatus, errorThrown);
-                  }
-              });
+            $('#newConversationBtn').on('click', function () {
+                $.ajax({
+                    url: '/new_session',
+                    type: 'POST',
+                    success: function (data) {
+                        console.log("Redirect URL:", data.redirect_url);
+                        // Clear the chat area
+                        $('#response').empty();
+                        // Clear the input field
+                        $('#prompt').val('');
+                        // Update the URL without reloading the page
+                        history.pushState({}, '', data.redirect_url);
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error("Error starting new conversation:", textStatus, errorThrown);
+                    }
+                });
             });
 
-            $('.example-prompt').on('click', function(e) {
+            $('.example-prompt').on('click', function (e) {
                 e.preventDefault();
                 $('#prompt').val($(this).text());
             });
 
             function markdownToHTML(markdownText) {
-               // Use markdown2 library to convert Markdown to HTML
-               var htmlText = markdown.toHTML(markdownText);
-               return htmlText;
-           }
+                // Use markdown2 library to convert Markdown to HTML
+                var htmlText = markdown.toHTML(markdownText);
+                return htmlText;
+            }
 
-           // New JavaScript for collapsible feature
-            $(document).on('click', '.ai-response', function() {
+            // New JavaScript for collapsible feature
+            $(document).on('click', '.ai-response', function () {
                 $(this).toggleClass('collapsed');
             });
+
+            // Identify Actions button functionality
+            $('#identifyActionsBtn').on('click', function () {
+                var $button = $(this);
+                // Create and insert the loading spinner
+                var $loadingIndicator = $('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
+                $button.prepend($loadingIndicator);
+                $button.prop('disabled', true).text('Identifying Actions...');
+
+                $.ajax({
+                    url: '/extract_actions',
+                    type: 'POST',
+                    success: function (data) {
+                        // Remove loading indicator and reset button
+                        $loadingIndicator.remove();
+                        $button.prop('disabled', false).text('Identify Actions');
+
+                        // Display debug information
+                        $('#openaiRequest').text(JSON.stringify(data.request, null, 2));
+                        $('#openaiResponse').text(JSON.stringify(data.response, null, 2));
+
+                        console.log("Received actions:", data.actions); // Log received actions
+
+                        // Populate actions list
+                        var actionsList = $('#actionsList');
+                        actionsList.empty();
+                        if (Array.isArray(data.actions) && data.actions.length > 0) {
+                            data.actions.forEach(function (action) {
+                                var li = $('<li>').addClass('list-group-item d-flex justify-content-between align-items-center');
+                                li.text(action.title);
+                                var addBtn = $('<button>').addClass('btn btn-sm btn-primary add-action').text('Add to Action Plan');
+                                addBtn.data('action', action);
+                                li.append(addBtn);
+                                actionsList.append(li);
+                            });
+
+                            // Show the "Add All" button
+                            $('#addAllActions').show();
+                        } else {
+                            console.error("No valid actions received");
+                            actionsList.append('<li class="list-group-item">No actions identified</li>');
+                            $('#addAllActions').hide();
+                        }
+
+                        // Show debug info first
+                        $('#debugInfo').show();
+                        $('#actionsContent').hide();
+                        $('#showActions').show();
+                        $('#actionsModal').modal('show');
+                    },
+                    error: function () {
+                        // Remove loading indicator and re-enable button on error
+                        $loadingIndicator.remove();
+                        $button.prop('disabled', false).text('Identify Actions');
+                        console.error("Error identifying actions:", textStatus, errorThrown);
+                        alert('An error occurred while identifying actions. Please try again.');
+                    }
+                });
+            });
+
+            // Show Actions button functionality
+            $('#showActions').on('click', function () {
+                $('#debugInfo').hide();
+                $('#actionsContent').show();
+                $(this).hide();
+            });
+
+            // Updated function to handle adding a single action
+            function addSingleAction(action, button) {
+                $.ajax({
+                    url: '/save_actions',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ actions: [action] }),
+                    success: function () {
+                        $(button).text('Added to Action Plan!')
+                            .prop('disabled', true)
+                            .addClass('btn-success')
+                            .removeClass('btn-primary');
+                    },
+                    error: function () {
+                        alert('Failed to add action. Please try again.');
+                    }
+                });
+            }
+
+            // Event delegation for dynamically created buttons
+            $(document).on('click', '.add-action', function (e) {
+                e.preventDefault();
+                var action = $(this).data('action');
+                addSingleAction(action, this);
+            });
+
+            $('#addAllActions').on('click', function (e) {
+                e.preventDefault();
+                var actions = [];
+                $('.add-action').each(function () {
+                    actions.push($(this).data('action'));
+                });
+
+                $.ajax({
+                    url: '/save_actions',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ actions: actions }),
+                    success: function () {
+                        $('.add-action').text('Added to Action Plan!')
+                            .prop('disabled', true)
+                            .addClass('btn-success')
+                            .removeClass('btn-primary');
+                        alert('All actions have been added to your action plan!');
+                    },
+                    error: function () {
+                        alert('Failed to add actions. Please try again.');
+                    }
+                });
+            });
+
+            function saveActions(actions) {
+                $.ajax({
+                    url: '/save_actions',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ actions: actions }),
+                    success: function () {
+                        alert('Actions saved successfully!');
+                        $('#actionsModal').modal('hide');
+                    }
+                });
+            }
         });
     </script>
 </head>
-<body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <a class="navbar-brand" href="#">
-        <img src="{{ url_for('static', filename='/assets/img/Logo.png') }}" width=80% height="30" style="margin-left: 25px;" class="d-inline-block align-top" alt="Logo">
-    </a>
-    <div class="collapse navbar-collapse justify-content-end">
-        <div class="navbar-nav">
-            <a class="nav-item nav-link btn" style="margin-right: 25px;" href="{{ url_for('logout') }}">Logout</a>
-        </div>
-    </div>
-</nav>
-
-<div class="container-fluid">
-<div class="row">
-
-  <div class="col-md-3" id="sessionsPanel">
-    <button id="newConversationBtn" class="btn btn-primary mb-3">New Chat</button>
-
-    <h4>Previous Sessions</h4>
-    <div id="sessionsList">
-      <ul>
-        {% for session_id, summary in session_ids %}
-          <li>
-            <a href="{{ url_for('query_view2', session_id=session_id) }}">
-              {{ summary | striptags | truncate(50, true, '...') }}
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="#">
+                <img src="{{ url_for('static', filename='/assets/img/Logo.png') }}" width="80%" height="30"
+                    style="margin-left: 25px;" class="d-inline-block align-top" alt="Logo">
             </a>
-          </li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'query_view2' %}active{% endif %}"
+                            href="{{ url_for('query_view2') }}">Conversations</a>
+                          </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('actions') }}">Actions</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-item nav-link btn btn" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
 
-<div class="col-md-9">
-  <!-- Existing chat container content -->
-  <div class="container-fluid chat-container p-3">
-  <h3 class="text-center"> Welcome {{user_name}}</h3>
-  <div id="response" class="mb-3"></div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-3" id="sessionsPanel">
+                    <button id="newConversationBtn" class="btn btn-primary mb-3">Add New Conversation</button>
 
-      <div class="mb-3 text-center">
-
-          <h4>👋 What I can help with?</h4>
-          <ul class="list-group">
-              <li class="list-group-item mx-auto" style="max-width: 300px;"><a href="#" class="example-prompt">Help me prepare for a 1:1</a></li>
-              <li class="list-group-item mx-auto" style="max-width: 300px;"><a href="#" class="example-prompt">Create a plan to develop my skills</a></li>
-              <li class="list-group-item mx-auto" style="max-width: 300px;"><a href="#" class="example-prompt">Interview Preparation</a></li>
-              <li class="list-group-item mx-auto" style="max-width: 300px;"><a href="#" class="example-prompt">Set goals</a></li>
-          </ul>
-      </div>
-</div>
-</div>
-</div>
-
-        <div class="prompt-container">
-
-            <form method="post" action="/chat/}">
-                <div class="input-group">
-                    <textarea class="form-control" id="prompt" name="prompt" rows="3" placeholder="Enter your prompt here..."></textarea>
-                    <button class="btn btn-primary" type="submit">Submit</button>
+                    <h4>Previous Sessions</h4>
+                    <div id="sessionsList">
+                        <ul>
+                            {% for session_id, summary in session_ids %}
+                            <li>
+                                <a href="{{ url_for('query_view2', session_id=session_id) }}">
+                                    {{ summary | striptags | truncate(50, true, '...') }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
-            </form>
+
+                <div class="col-md-9">
+                    <div class="container-fluid chat-container p-3">
+                        <h3>Welcome {{user_name}}</h3>
+                        <div id="response" class="mb-3"></div>
+
+                        <div class="mb-3">
+                            <h6>What I can help with</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item"><a href="#" class="example-prompt">Help me prepare for a 1:1</a>
+                                </li>
+                                <li class="list-group-item"><a href="#" class="example-prompt">Create a plan to develop my
+                                        skills</a></li>
+                                <li class="list-group-item"><a href="#" class="example-prompt">Interview Preparation</a>
+                                </li>
+                                <li class="list-group-item"><a href="#" class="example-prompt">Set goals</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="prompt-container">
+                <form method="post" action="/chat/">
+                    <div class="input-group">
+                        <textarea class="form-control" id="prompt" name="prompt" rows="3"
+                            placeholder="Enter your prompt here..."></textarea>
+                        <button class="btn btn-primary" type="submit">Submit</button>
+                        <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Identify Actions</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+
+        <!-- Actions Modal -->
+        <div class="modal fade" id="actionsModal" tabindex="-1" aria-labelledby="actionsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="actionsModalLabel">Identified Actions</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="debugInfo" class="mb-3">
+                            <h6>Debug Information</h6>
+                            <pre id="openaiRequest"></pre>
+                            <pre id="openaiResponse"></pre>
+                        </div>
+                        <button class="btn btn-primary mb-3" id="showActions">Next: Show Actions</button>
+                        <div id="actionsContent" style="display: none;">
+                            <button class="btn btn-primary mb-3" id="addAllActions">Add All to Action Plan</button>
+                            <ul id="actionsList" class="list-group">
+                                <!-- Actions will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 </body>
+
 </html>
