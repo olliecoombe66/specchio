@@ -8,6 +8,10 @@ import markdown2
 import uuid
 from flask_mail import Mail, Message
 from datetime import datetime as dt, timedelta
+import json
+import logging
+
+
 
 #get environment variables
 load_dotenv()
@@ -80,6 +84,19 @@ def init_sqlite_db():
             )
     ''')
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS actions (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER,
+            conversation_id TEXT,
+            title TEXT NOT NULL,
+            details TEXT,
+            due_date DATE,
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY,
             user_id INTEGER,
@@ -133,16 +150,30 @@ def update_session_summary(session_id, user_id, summary, date_time):
             cursor.execute('INSERT INTO sessions (session_id, user_id, summary, date_created) VALUES (?, ?, ?, ?)', (session_id, user_id, summary, date_time))
 
         conn.commit()
+        print(f"Summary updated for session {session_id}")
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
     finally:
         conn.close()
 
+def generate_summary(conversation_history, max_length=50):
+    # Combine all messages into one string
+    full_conversation = " ".join([msg['content'] for msg in conversation_history])
+
+    # Take the first `max_length` characters
+    summary = full_conversation[:max_length]
+
+    # Add ellipsis if the summary was truncated
+    if len(full_conversation) > max_length:
+        summary += "..."
+
+    return summary
+
 def get_session_ids(user_id):
     try:
         with sqlite3.connect('database.db') as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ? ORDER BY date_created DESC', (user_id,))
+            cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ? ORDER BY date_created DESC', (user_id))
             sessions = cursor.fetchall()
         return [(session[0], session[1]) for session in sessions]
     except sqlite3.Error as e:
@@ -198,13 +229,22 @@ def get_user_name_with_email(email):
 def load_conversation_history(user_id, session_id, limit=10):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('''
-        SELECT role, content FROM conversations
-        WHERE user_id = ?
-        AND session_id = ?
-        ORDER BY timestamp DESC
-        LIMIT ?
-    ''', (user_id, session_id, limit))
+    if limit is None:
+        # If no limit is specified, fetch all messages
+        cursor.execute('''
+            SELECT role, content FROM conversations
+            WHERE user_id = ? AND session_id = ?
+            ORDER BY timestamp ASC
+        ''', (user_id, session_id))
+    else:
+        # If a limit is specified, fetch the most recent messages
+        cursor.execute('''
+            SELECT role, content FROM conversations
+            WHERE user_id = ? AND session_id = ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (user_id, session_id, limit))
+    
     messages = cursor.fetchall()
     conn.close()
 
@@ -241,6 +281,7 @@ def generate_chat_summary(conversation_history):
     messages = [
         {"role": "system", "content": "You are a summarization assistant. Provide a brief summary of the conversation. Limit to less than 5 words."}
     ]
+    messages.extend(conversation_history)
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -251,6 +292,60 @@ def generate_chat_summary(conversation_history):
         temperature=0.5,
     )
     return response.choices[0].message.content
+
+# Create actions
+def create_user_action(user_id, conversation_id, title, details, due_date):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO actions (user_id, conversation_id, title, details, due_date)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, conversation_id, title, details, due_date))
+    action_id = cursor.lastrowid
+    
+    conn.commit()
+    conn.close()
+    return action_id
+
+# Get actions
+def get_user_actions(user_id):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT a.id, a.title, a.details, a.due_date, a.status
+        FROM actions a
+        WHERE a.user_id = ?
+        ORDER BY a.due_date ASC
+    ''', (user_id,))
+    actions = cursor.fetchall()
+    conn.close()
+    
+    # Convert to list of dictionaries for easier handling in JavaScript
+    return [
+        {
+            'id': action[0],
+            'title': action[1],
+            'details': action[2],
+            'due_date': action[3],
+            'status': action[4]
+        }
+        for action in actions
+    ]
+
+# Update actions
+def update_action(action_id, title, details, due_date, status):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE actions
+        SET title = ?, details = ?, due_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (title, details, due_date, status, action_id))
+    
+    conn.commit()
+    conn.close()
+
+
 
 def save_reset_token(user_id, token):
     conn = sqlite3.connect('database.db')
@@ -265,7 +360,8 @@ def get_user_by_reset_token(token):
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM password_reset_tokens WHERE token = ? AND expiration_time >= ?', (token, dt.now()))
     token_data = cursor.fetchone()
-
+    print("Hello!")
+    print(token_data)
     if token_data:
         user_id = token_data[0]
         cursor.execute('SELECT * FROM users WHERE username = ?', (user_id,))
@@ -301,10 +397,11 @@ def query_view():
 def query_view2(session_id=None):
     if 'conversation_history' not in session:
         session['conversation_history'] = []
+    print("help")
+    print(session_id)
     # Fetch user's name from the database using user_id stored in session
     user_id = session.get('user_id')
     user_name = get_user_name(user_id) if user_id else None
-
 
     # Determine the session_id to use
     if session_id is None:
@@ -313,6 +410,8 @@ def query_view2(session_id=None):
         session['session_id'] = session_id  # Update session_id in session
 
     session_ids = get_session_ids(user_id)
+    print("Sumamries")
+    print(session_ids)
 
     if request.method == 'POST':
         prompt = request.form['prompt']
@@ -334,7 +433,7 @@ def query_view2(session_id=None):
         session['conversation_history'] = session['conversation_history'][-100:]
         html_response = markdown2.markdown(response)
         history = load_conversation_history(session['user_id'], session_id)
-        create_session(user_id, session['session_id'], dt.now())
+        create_session(user_id, session['session_id'])
 
         #update summary
         conversation_history = load_conversation_history(session['user_id'], session_id)
@@ -350,10 +449,11 @@ def query_view2(session_id=None):
         conn.close()
 
 
+        print(message_count)
 
         if message_count == 2:  # Every 3 user messages
             summary = generate_chat_summary(session['conversation_history'])
-            update_session_summary(session_id, session['user_id'], summary, dt.now())
+            update_session_summary(session_id, session['user_id'], summary)
 
         session.modified = True
         return jsonify({'response': html_response})
@@ -447,6 +547,7 @@ def logout():
 def reset_password_request():
     if request.method == 'POST':
         email = request.form['email']
+        print(email)
         user = get_user_name_with_email(email)
 
         if user:
@@ -460,11 +561,13 @@ def reset_password_request():
 
     return render_template('reset_password.html')
 
+#Creates token for reset password
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     print(f"Token: {token}")
     user = get_user_by_reset_token(token)
     print(user)
+
     if not user:
         flash('Invalid or expired reset link.')
         return redirect(url_for('login'))
@@ -501,11 +604,115 @@ def new_session():
         'redirect_url': url_for('query_view2', session_id=new_session_id)
     })
 
-@app.route('/get_updated_sessions', methods=['GET'])
-def get_updated_sessions():
+#Actions page
+@app.route('/actions')
+def actions():
     user_id = session.get('user_id')
-    session_ids = get_session_ids(user_id)
-    return jsonify(session_ids)
+    if not user_id:
+        return redirect(url_for('login'))
+    
+    user_actions = get_user_actions(user_id)
+    user_name = get_user_name(user_id)
+    return render_template('actions.html', actions=user_actions, user_name=user_name)
+
+
+@app.route('/extract_actions', methods=['POST'])
+def extract_actions():
+    user_id = session.get('user_id')
+    session_id = session.get('session_id')
+    
+    # Fetch the entire conversation
+    conversation = load_conversation_history(user_id, session_id, limit=None)
+    
+    # Prepare the prompt for OpenAI
+    prompt = (
+        "Extract actionable items from the following conversation. "
+        "Respond with a JSON object containing an 'actions' key, which is an array of action objects. "
+        "Each action object should have 'title', 'details', and 'due_date' fields.\n\n"
+    )    
+    prompt += "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation])
+    
+    # Prepare the messages for the OpenAI API call
+    messages = [
+        {"role": "system", "content": "You are an AI assistant that extracts actionable items from conversations and responds in JSON format."},
+        {"role": "user", "content": prompt}
+    ]
+
+    # Call OpenAI API
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        response_format={ "type": "json_object" },
+        messages=messages,
+        max_tokens=1000,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+    
+    # Log the raw response content
+    logging.info(f"OpenAI raw response: {response.choices[0].message.content}")
+    
+
+    # Parse the response
+    try:
+        response_data = json.loads(response.choices[0].message.content)
+        actions = response_data.get('actions', [])
+        logging.info(f"Parsed actions: {actions}")
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse OpenAI response: {e}")
+        actions = []
+    
+    # If no actions were extracted or if parsing failed, add a dummy action
+    if not actions:
+        logging.warning("No actions found or parsing failed. Adding dummy action.")
+        actions = [{"title": "Dummy Action", "details": "No actions were identified in the conversation. This is a placeholder action.", "due_date": ""}]
+    
+    # Prepare debug information
+    debug_info = {
+        "request": {
+            "messages": messages,
+            "max_tokens": 1000,
+            "temperature": 0.5
+        },
+        "response": response.dict()  # Convert the response object to a dictionary
+    }
+    
+    return jsonify({
+        "actions": actions,
+        "request": debug_info["request"],
+        "response": debug_info["response"]
+    })
+
+# Add this route to save actions
+@app.route('/save_actions', methods=['POST'])
+def save_actions_route():
+    user_id = session.get('user_id')
+    actions = request.json.get('actions')
+    save_actions(user_id, actions)
+    return jsonify({"success": True})
+
+def save_actions(user_id, actions):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    for action in actions:
+        cursor.execute('''
+            INSERT INTO actions (user_id, conversation_id, title, details, due_date)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, session.get('session_id'), action['title'], action['details'], action['due_date']))
+    conn.commit()
+    conn.close()
+
+# Fetch actions for display
+@app.route('/get_actions')
+def get_actions():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'actions': []})
+    
+    actions = get_user_actions(user_id)
+    return jsonify({'actions': actions})
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
