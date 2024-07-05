@@ -460,22 +460,34 @@ def reset_password_request():
 
     return render_template('reset_password.html')
 
-#Creates token for reset password
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+    print(f"Token: {token}")
     user = get_user_by_reset_token(token)
-
+    print(user)
     if not user:
         flash('Invalid or expired reset link.')
         return redirect(url_for('login'))
 
+    if isinstance(user, tuple):
+        user_id, email = user[0], user[1]
+    else:
+        # Assuming user is a dictionary
+        user_id, email = user.get('id'), user.get('email')
+
+    print(f"User ID: {user_id}, Email: {email}")
+
     if request.method == 'POST':
-        password = request.form['password']
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        update_user_password(user['id'], hashed_password)  # Update user's password
-        clear_reset_token(user['id'])  # Clear/reset the token after successful reset
-        flash('Your password has been reset successfully. Please log in.')
-        return redirect(url_for('login'))
+        try:
+            password = request.form['password']
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+            update_user_password(user_id, hashed_password)
+            clear_reset_token(user_id)  # Use user_id instead of user['id']
+            flash('Your password has been reset successfully. Please log in.')
+            return redirect(url_for('login'))
+        except Exception as e:
+            print(f"Error in password reset: {str(e)}")
+            flash('An error occurred while resetting your password. Please try again.')
 
     return render_template('reset_password_form.html', token=token)
 

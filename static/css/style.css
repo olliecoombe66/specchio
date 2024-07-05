@@ -1,9 +1,19 @@
+/* Import the Roboto font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+/* Apply the font-family to all elements */
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
 html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    font-family: Roboto, sans-serif;
 }
+
+
 
 .chat-container {
     display: flex;
@@ -13,11 +23,17 @@ html, body {
 
 .btn {
   background-color: #A96DC2;
-
 }
 
 .btn:hover {
     background-color: #450E43;
+}
+
+.nav-link {
+  background: None;
+}
+.nav-link:hover {
+  background: None;
 }
 
 
@@ -150,14 +166,23 @@ html, body {
     background-color: #f0f0f0;
 }
 
-#sessionsList a::before {
-    content: '\F4AD'; /* Unicode for chat bubble icon */
-    font-family: 'Bootstrap-icons';
-    margin-right: 10px;
-    color: #6c757d;
-}
-
 h4 {
     margin-bottom: 20px;
     color: #333;
+}
+
+.example-prompts-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.example-prompt {
+  color: #A96DC2;
+}
+
+.list-group-item {
+  width: 400px
 }
