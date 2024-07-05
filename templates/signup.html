@@ -8,7 +8,6 @@
     <!-- Favicons -->
     <link href="{{ url_for('static', filename='/assets/img/favicon/favicon.ico') }}" rel="icon">
     <link href="{{ url_for('static', filename='/assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
-
     <style>
         .error-message {
             color: red;
@@ -22,12 +21,12 @@
         <h2>Sign Up</h2>
         <form method="POST" action="{{ url_for('signup') }}" onsubmit="return validateForm()">
           <div class="form-group">
-              <label for="username">Preferred name</label>
+              <label for="name">Preferred name</label>
               <input type="text" id="name" name="name" required>
           </div>
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+                <label for="username">Email address</label>
+                <input type="email" id="username" name="username" required>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
@@ -37,6 +36,7 @@
                 <label for="password-confirm">Confirm Password</label>
                 <input type="password" id="password-confirm" name="password-confirm" required>
             </div>
+            <div id="email-error" class="error-message"></div>
             <div id="password-error" class="error-message"></div>
             <br>
             <button type="submit" class="btn">Sign Up</button>
@@ -52,12 +52,20 @@
           {% endif %}
         {% endwith %}
     </div>
-
     <script>
         function validateForm() {
+            var email = document.getElementById("username").value;
             var password = document.getElementById("password").value;
             var confirmPassword = document.getElementById("password-confirm").value;
+            var emailError = document.getElementById("email-error");
             var passwordError = document.getElementById("password-error");
+
+            // Check if email is valid
+            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                emailError.innerText = "Please enter a valid email address.";
+                return false;
+            }
 
             // Check if passwords match
             if (password !== confirmPassword) {
@@ -67,13 +75,14 @@
 
             // Check if password is secure enough (example: at least 8 characters)
             if (password.length < 6) {
-                passwordError.innerText = "Password must be at least 8 characters long.";
+                passwordError.innerText = "Password must be at least 6 characters long.";
                 return false;
             }
 
             // Additional checks for password security can be added here as needed
 
             // Clear any previous error messages if validation passes
+            emailError.innerText = "";
             passwordError.innerText = "";
             return true;
         }

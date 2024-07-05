@@ -83,7 +83,9 @@ def init_sqlite_db():
         CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY,
             user_id INTEGER,
-            session_id TEXT
+            summary TEXT,
+            session_id TEXT,
+            date_created DATETIME
         )
     ''')
     cursor.execute('''
@@ -99,7 +101,7 @@ def init_sqlite_db():
 init_sqlite_db()
 
 #create sessions (only if not already there)
-def create_session(user_id, session_id):
+def create_session(user_id, session_id, date_created):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
@@ -109,13 +111,13 @@ def create_session(user_id, session_id):
 
     if not existing_session:
         # If no session exists, create a new one
-        cursor.execute('INSERT INTO sessions (user_id, session_id) VALUES (?, ?)', (user_id, session_id))
+        cursor.execute('INSERT INTO sessions (user_id, session_id, date_created) VALUES (?, ?, ?)', (user_id, session_id, date_created))
         conn.commit()
 
     conn.close()
 
 
-def update_session_summary(session_id, user_id, summary):
+def update_session_summary(session_id, user_id, summary, date_time):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     try:
@@ -128,36 +130,24 @@ def update_session_summary(session_id, user_id, summary):
             cursor.execute('UPDATE sessions SET summary = ? WHERE session_id = ?', (summary, session_id))
         else:
             # If session doesn't exist, insert new row (this shouldn't happen if sessions are created properly)
-            cursor.execute('INSERT INTO sessions (session_id, user_id, summary) VALUES (?, ?, ?)', (session_id, user_id, summary))
+            cursor.execute('INSERT INTO sessions (session_id, user_id, summary, date_created) VALUES (?, ?, ?, ?)', (session_id, user_id, summary, date_time))
 
         conn.commit()
-        print(f"Summary updated for session {session_id}")
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
     finally:
         conn.close()
 
-def generate_summary(conversation_history, max_length=50):
-    # Combine all messages into one string
-    full_conversation = " ".join([msg['content'] for msg in conversation_history])
-
-    # Take the first `max_length` characters
-    summary = full_conversation[:max_length]
-
-    # Add ellipsis if the summary was truncated
-    if len(full_conversation) > max_length:
-        summary += "..."
-
-    return summary
-
 def get_session_ids(user_id):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ?', (user_id,))
-    sessions= cursor.fetchall()
-    conn.close()
-    print()
-    return [(session[0], session[1]) for session in sessions]
+    try:
+        with sqlite3.connect('database.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ? ORDER BY date_created DESC', (user_id,))
+            sessions = cursor.fetchall()
+        return [(session[0], session[1]) for session in sessions]
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return []
 
 def get_user_name(user_id):
     # Establish a connection to the SQLite database
@@ -251,7 +241,6 @@ def generate_chat_summary(conversation_history):
     messages = [
         {"role": "system", "content": "You are a summarization assistant. Provide a brief summary of the conversation. Limit to less than 5 words."}
     ]
-    messages.extend(conversation_history)
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -276,8 +265,7 @@ def get_user_by_reset_token(token):
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM password_reset_tokens WHERE token = ? AND expiration_time >= ?', (token, dt.now()))
     token_data = cursor.fetchone()
-    print("Hello!")
-    print(token_data)
+
     if token_data:
         user_id = token_data[0]
         cursor.execute('SELECT * FROM users WHERE username = ?', (user_id,))
@@ -317,7 +305,6 @@ def query_view2(session_id=None):
     user_id = session.get('user_id')
     user_name = get_user_name(user_id) if user_id else None
 
-    print(OPENAI_API_KEY)
 
     # Determine the session_id to use
     if session_id is None:
@@ -347,7 +334,7 @@ def query_view2(session_id=None):
         session['conversation_history'] = session['conversation_history'][-100:]
         html_response = markdown2.markdown(response)
         history = load_conversation_history(session['user_id'], session_id)
-        create_session(user_id, session['session_id'])
+        create_session(user_id, session['session_id'], dt.now())
 
         #update summary
         conversation_history = load_conversation_history(session['user_id'], session_id)
@@ -363,11 +350,10 @@ def query_view2(session_id=None):
         conn.close()
 
 
-        print(message_count)
 
         if message_count == 2:  # Every 3 user messages
             summary = generate_chat_summary(session['conversation_history'])
-            update_session_summary(session_id, session['user_id'], summary)
+            update_session_summary(session_id, session['user_id'], summary, dt.now())
 
         session.modified = True
         return jsonify({'response': html_response})
@@ -452,6 +438,7 @@ def get_conversation_history():
 def logout():
     # Clear the session data
     session.clear()
+    print("logout")
     flash('You have been logged out successfully.')
     return redirect(url_for('query_view'))
 
@@ -460,7 +447,6 @@ def logout():
 def reset_password_request():
     if request.method == 'POST':
         email = request.form['email']
-        print(email)
         user = get_user_name_with_email(email)
 
         if user:
@@ -478,7 +464,6 @@ def reset_password_request():
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     user = get_user_by_reset_token(token)
-    print(user)
 
     if not user:
         flash('Invalid or expired reset link.')
@@ -503,6 +488,12 @@ def new_session():
         'session_id': new_session_id,
         'redirect_url': url_for('query_view2', session_id=new_session_id)
     })
+
+@app.route('/get_updated_sessions', methods=['GET'])
+def get_updated_sessions():
+    user_id = session.get('user_id')
+    session_ids = get_session_ids(user_id)
+    return jsonify(session_ids)
 
 if __name__ == "__main__":
     app.run(debug=True)
