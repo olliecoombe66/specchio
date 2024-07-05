@@ -179,10 +179,47 @@ h4 {
     height: 100vh;
 }
 
+/* Update the .example-prompt class to display as pill box */
 .example-prompt {
-  color: #A96DC2;
+  color: #A96DC2;  /* Existing color */
+  border-radius: 50px; /* Pill shape */
+
 }
 
+/* Update the .list-group-item class to display as pill box */
 .list-group-item {
-  width: 400px
+  width: 100%; /* Make it responsive */
+  max-width: 400px; /* Maximum width */
+  padding: 15px 20px; /* Adding padding */
+  margin-bottom: 10px; /* Adding margin between items */
+  background-color: #fff; /* White background */
+  border: 1px solid #ddd; /* Border */
+  border-radius: 50px; /* Pill shape */
+  transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+/* Specific styling for the first list item */
+.list-group-item:first-child {
+  border-top-left-radius: 50px; /* Top left rounded corner */
+  border-top-right-radius: 50px; /* Top right rounded corner */
+}
+
+/* Specific styling for the last list item */
+.list-group-item:last-child {
+  border-bottom-left-radius: 50px; /* Bottom left rounded corner */
+  border-bottom-right-radius: 50px; /* Bottom right rounded corner */
+}
+
+/* Adding hover effect for both classes */
+.example-prompt:hover,
+.list-group-item:hover {
+  background-color: #e0e0e0; /* Grey background on hover */
+}
+
+/* Adding media query for responsiveness */
+@media (max-width: 600px) {
+  .list-group-item {
+    width: 100%; /* Full width on smaller screens */
+    max-width: none; /* Remove max-width constraint */
+  }
 }
