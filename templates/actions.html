@@ -27,7 +27,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('query_view2') }}">Conversations</a>
+                    <a class="nav-link" href="{{ url_for('query_view2', session_id=session_id) }}">Conversations</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" href="{{ url_for('actions') }}">Actions</a>
@@ -137,7 +137,7 @@
                 "Pending",
                 "Completed"
             ];
-        
+
             function createStatusDropdown(action) {
         var statusOptions = ["Not Started", "In Progress", "Pending", "Completed"];
         var select = $('<select>').addClass('form-select status-dropdown').data('action-id', action.id);
@@ -167,12 +167,12 @@
                     row.append($('<td>').text(action.details));
                     row.append($('<td>').text(action.due_date));
                     row.append($('<td>').append(createStatusDropdown(action)));
-                    
+
                     var actionButtons = $('<td>');
                     var editButton = $('<button>').addClass('btn btn-primary btn-sm edit-action me-2').text('Edit').data('action-id', action.id);
                     var deleteButton = $('<button>').addClass('btn btn-danger btn-sm delete-action').text('Delete').data('action-id', action.id);
                     actionButtons.append(editButton, deleteButton);
-                    
+
                     row.append(actionButtons);
 
                     if (action.status === 'Completed') {
@@ -185,13 +185,13 @@
         });
     }
 
-    loadActions();       
+    loadActions();
 
         // Edit action
         $(document).on('click', '.edit-action', function() {
             var actionId = $(this).data('action-id');
             var action = dummyActions.find(a => a.id === actionId);
-            
+
             if (action) {
                 $('#actionId').val(action.id);
                 $('#actionTitle').val(action.title);
@@ -205,7 +205,7 @@
         $('#saveActionChanges').on('click', function() {
             var actionId = parseInt($('#actionId').val());
             var actionIndex = dummyActions.findIndex(a => a.id === actionId);
-            
+
             if (actionIndex !== -1) {
                 dummyActions[actionIndex] = {
                     ...dummyActions[actionIndex],
@@ -213,7 +213,7 @@
                     details: $('#actionDetails').val(),
                     due_date: $('#actionDueDate').val()
                 };
-                
+
                 $('#editActionModal').modal('hide');
                 loadActions();  // Reload the actions list
             }
@@ -236,7 +236,7 @@
             var actionId = $(this).data('action-id');
             var newStatus = $(this).val();
             var actionIndex = dummyActions.findIndex(a => a.id === actionId);
-            
+
             if (actionIndex !== -1) {
                 dummyActions[actionIndex].status = newStatus;
                 loadActions();  // Reload the actions list
