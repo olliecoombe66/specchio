@@ -4,6 +4,7 @@
 /* Apply the font-family to all elements */
 * {
     font-family: 'Roboto', sans-serif;
+    font-family: sans-serif;
 }
 
 html, body {
@@ -11,6 +12,8 @@ html, body {
     margin: 0;
     padding: 0;
     font-family: Roboto, sans-serif;
+
+
 }
 
 
@@ -22,11 +25,14 @@ html, body {
 }
 
 .btn {
-  background-color: #A96DC2;
+  background-image: linear-gradient(to bottom right, #D16ECD, #726CB4);
+  border: 0px solid;
+
 }
 
 .btn:hover {
-    background-color: #450E43;
+  border: 0px solid;
+
 }
 
 .nav-link {
@@ -34,6 +40,14 @@ html, body {
 }
 .nav-link:hover {
   background: None;
+}
+
+h2,h3,h4 {
+    background-image: linear-gradient(to right, #D16ECD, #726CB4);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
 
@@ -64,7 +78,7 @@ html, body {
 }
 
 .user-message {
-    background-color: #A96DC2;
+    background-image: linear-gradient(to bottom right, #D16ECD, #726CB4);
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 0;
