@@ -284,7 +284,7 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'query_view2' %}active{% endif %}"
                             href="{{ url_for('query_view2') }}">Conversations</a>
-                    </li>
+                          </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('actions') }}">Actions</a>
                     </li>
@@ -294,12 +294,10 @@
                 </ul>
             </div>
         </nav>
-    
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-3" id="sessionsPanel">
                     <button id="newConversationBtn" class="btn btn-primary mb-3">Add New Conversation</button>
-    
                     <h4>Previous Sessions</h4>
                     <div id="sessionsList">
                         <ul>
@@ -313,12 +311,10 @@
                         </ul>
                     </div>
                 </div>
-    
                 <div class="col-md-9">
                     <div class="container-fluid chat-container p-3">
                         <h3>Welcome {{user_name}}</h3>
                         <div id="response" class="mb-3"></div>
-    
                         <div class="mb-3">
                             <h6>What I can help with</h6>
                             <ul class="list-group">
@@ -331,22 +327,26 @@
                                 <li class="list-group-item"><a href="#" class="example-prompt">Set goals</a></li>
                             </ul>
                         </div>
+                        <div class="mb-4 float-end">
+                        <ul class="list-group">
+                            <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Generate action plan</button>
+                        </ul>
+                    </div>
                     </div>
                 </div>
             </div>
-    
+
+
             <div class="prompt-container">
                 <form method="post" action="/chat/">
                     <div class="input-group">
                         <textarea class="form-control" id="prompt" name="prompt" rows="3"
                             placeholder="Enter your prompt here..."></textarea>
                         <button class="btn btn-primary" type="submit">Submit</button>
-                        <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Identify Actions</button>
                     </div>
                 </form>
             </div>
         </div>
-    
         <!-- Actions Modal -->
         <div class="modal fade" id="actionsModal" tabindex="-1" aria-labelledby="actionsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">

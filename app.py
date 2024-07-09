@@ -92,6 +92,8 @@ def init_sqlite_db():
             details TEXT,
             due_date DATE,
             status TEXT DEFAULT 'pending',
+            objective TEXT
+            objective_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -244,7 +246,6 @@ def load_conversation_history(user_id, session_id, limit=10):
             ORDER BY timestamp DESC
             LIMIT ?
         ''', (user_id, session_id, limit))
-    
     messages = cursor.fetchall()
     conn.close()
 
@@ -294,15 +295,15 @@ def generate_chat_summary(conversation_history):
     return response.choices[0].message.content
 
 # Create actions
-def create_user_action(user_id, conversation_id, title, details, due_date):
+def create_user_action(user_id, conversation_id, title, details, due_date, objective, objective_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO actions (user_id, conversation_id, title, details, due_date)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO actions (user_id, conversation_id, title, details, due_date, objective, objective_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (user_id, conversation_id, title, details, due_date))
     action_id = cursor.lastrowid
-    
+
     conn.commit()
     conn.close()
     return action_id
@@ -312,14 +313,13 @@ def get_user_actions(user_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT a.id, a.title, a.details, a.due_date, a.status
+        SELECT a.id, a.title, a.details, a.due_date, a.status, a.objective, a.objective_id
         FROM actions a
         WHERE a.user_id = ?
         ORDER BY a.due_date ASC
     ''', (user_id,))
     actions = cursor.fetchall()
     conn.close()
-    
     # Convert to list of dictionaries for easier handling in JavaScript
     return [
         {
@@ -327,7 +327,37 @@ def get_user_actions(user_id):
             'title': action[1],
             'details': action[2],
             'due_date': action[3],
-            'status': action[4]
+            'status': action[4],
+            'objective': action[5],
+            'objective_id': action[6]
+
+        }
+        for action in actions
+    ]
+
+def get_user_actions_by_objective(user_id, objective):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT a.id, a.title, a.details, a.due_date, a.status, a.objective, a.objective_id
+        FROM actions a
+        WHERE a.user_id = ? AND a.objective_id = ?
+        ORDER BY a.due_date ASC
+    ''', (user_id, objective))
+    actions = cursor.fetchall()
+    conn.close()
+
+    # Convert to list of dictionaries for easier handling in JavaScript
+    return [
+        {
+            'id': action[0],
+            'title': action[1],
+            'details': action[2],
+            'due_date': action[3],
+            'status': action[4],
+            'objective': action[5],
+            'objective_id': action[6]
+
         }
         for action in actions
     ]
@@ -341,7 +371,6 @@ def update_action(action_id, title, details, due_date, status):
         SET title = ?, details = ?, due_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     ''', (title, details, due_date, status, action_id))
-    
     conn.commit()
     conn.close()
 
@@ -360,8 +389,7 @@ def get_user_by_reset_token(token):
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM password_reset_tokens WHERE token = ? AND expiration_time >= ?', (token, dt.now()))
     token_data = cursor.fetchone()
-    print("Hello!")
-    print(token_data)
+    print(f"get_user_reset_token {token_data}")
     if token_data:
         user_id = token_data[0]
         cursor.execute('SELECT * FROM users WHERE username = ?', (user_id,))
@@ -413,6 +441,8 @@ def query_view2(session_id=None):
     print("Sumamries")
     print(session_ids)
 
+
+
     if request.method == 'POST':
         prompt = request.form['prompt']
 
@@ -450,6 +480,7 @@ def query_view2(session_id=None):
 
 
         print(message_count)
+
 
         if message_count == 2:  # Every 3 user messages
             summary = generate_chat_summary(session['conversation_history'])
@@ -566,7 +597,6 @@ def reset_password_request():
 def reset_password(token):
     print(f"Token: {token}")
     user = get_user_by_reset_token(token)
-    print(user)
 
     if not user:
         flash('Invalid or expired reset link.')
@@ -606,32 +636,55 @@ def new_session():
 
 #Actions page
 @app.route('/actions')
-def actions():
+@app.route('/actions/<objective>', methods=['POST', 'GET'])
+def actions(objective=None):
+    print(objective)
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('login'))
-    
+    session_ids = get_session_ids(user_id)
     user_actions = get_user_actions(user_id)
+    print(objective)
+    print(user_id)
+    actions = get_user_actions_by_objective(user_id, objective)
+
+    print(actions)
+
+    unique_objectives = {(item['objective'], item['objective_id']) for item in user_actions}
+    print(unique_objectives)
+
     user_name = get_user_name(user_id)
-    return render_template('actions.html', actions=user_actions, user_name=user_name)
+
+    return render_template('actions.html',
+                           actions=actions,
+                           user_name=user_name,
+                           session_id=session.get('session_id'),
+                           session_ids=session_ids,
+                           objective=objective,
+                           unique_objectives=unique_objectives,
+                           )
+
 
 
 @app.route('/extract_actions', methods=['POST'])
 def extract_actions():
     user_id = session.get('user_id')
     session_id = session.get('session_id')
-    
+
     # Fetch the entire conversation
     conversation = load_conversation_history(user_id, session_id, limit=None)
-    
+
     # Prepare the prompt for OpenAI
     prompt = (
         "Extract actionable items from the following conversation. "
         "Respond with a JSON object containing an 'actions' key, which is an array of action objects. "
-        "Each action object should have 'title', 'details', and 'due_date' fields.\n\n"
-    )    
+        "Each action object should have 'objective', 'objective_id, title', 'details', and 'due_date' fields. Objective should be the same across all generated actions."
+        "objective_id should be set to same value as 'objective' but converted to snake case."
+        "Make sure in the 'title' that the action is Specific, Measurable, Actionable, Realistic and Time bound/n/n"
+
+    )
     prompt += "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation])
-    
+
     # Prepare the messages for the OpenAI API call
     messages = [
         {"role": "system", "content": "You are an AI assistant that extracts actionable items from conversations and responds in JSON format."},
@@ -648,10 +701,10 @@ def extract_actions():
         stop=None,
         temperature=0.5,
     )
-    
+
     # Log the raw response content
     logging.info(f"OpenAI raw response: {response.choices[0].message.content}")
-    
+
 
     # Parse the response
     try:
@@ -661,12 +714,10 @@ def extract_actions():
     except json.JSONDecodeError as e:
         logging.error(f"Failed to parse OpenAI response: {e}")
         actions = []
-    
     # If no actions were extracted or if parsing failed, add a dummy action
     if not actions:
         logging.warning("No actions found or parsing failed. Adding dummy action.")
         actions = [{"title": "Dummy Action", "details": "No actions were identified in the conversation. This is a placeholder action.", "due_date": ""}]
-    
     # Prepare debug information
     debug_info = {
         "request": {
@@ -676,7 +727,6 @@ def extract_actions():
         },
         "response": response.dict()  # Convert the response object to a dictionary
     }
-    
     return jsonify({
         "actions": actions,
         "request": debug_info["request"],
@@ -696,9 +746,9 @@ def save_actions(user_id, actions):
     cursor = conn.cursor()
     for action in actions:
         cursor.execute('''
-            INSERT INTO actions (user_id, conversation_id, title, details, due_date)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, session.get('session_id'), action['title'], action['details'], action['due_date']))
+            INSERT INTO actions (user_id, conversation_id, title, details, due_date, objective, objective_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, session.get('session_id'), action['title'], action['details'], action['due_date'], action['objective'], action['objective_id']))
     conn.commit()
     conn.close()
 
@@ -708,7 +758,6 @@ def get_actions():
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'actions': []})
-    
     actions = get_user_actions(user_id)
     return jsonify({'actions': actions})
 
