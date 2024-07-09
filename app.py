@@ -762,6 +762,31 @@ def get_actions():
     actions = get_user_actions(user_id)
     return jsonify({'actions': actions})
 
+@app.route('/complete_action', methods=['POST'])
+def complete_action():
+    print("Action triggered")
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'User not logged in'}), 401
+
+    action_id = request.json.get('action_id')
+    if not action_id:
+        return jsonify({'success': False, 'error': 'No action_id provided'}), 400
+
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE actions
+            SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND user_id = ?
+        ''', (action_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Action marked as completed'})
+    except sqlite3.Error as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 
 if __name__ == "__main__":
