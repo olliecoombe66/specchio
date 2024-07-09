@@ -331,9 +331,15 @@
                                 <li class="list-group-item"><a href="#" class="example-prompt">Set goals</a></li>
                             </ul>
                         </div>
+                        <div class="mb-4 float-end">
+                        <ul class="list-group">
+                            <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Generate action plan</button>
+                        </ul>
+                    </div>
                     </div>
                 </div>
             </div>
+
 
             <div class="prompt-container">
                 <form method="post" action="/chat/">
@@ -341,7 +347,6 @@
                         <textarea class="form-control" id="prompt" name="prompt" rows="3"
                             placeholder="Enter your prompt here..."></textarea>
                         <button class="btn btn-primary" type="submit">Submit</button>
-                        <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Identify Actions</button>
                     </div>
                 </form>
             </div>

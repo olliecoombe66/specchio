@@ -92,6 +92,8 @@ def init_sqlite_db():
             details TEXT,
             due_date DATE,
             status TEXT DEFAULT 'pending',
+            objective TEXT
+            objective_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -294,12 +296,12 @@ def generate_chat_summary(conversation_history):
     return response.choices[0].message.content
 
 # Create actions
-def create_user_action(user_id, conversation_id, title, details, due_date):
+def create_user_action(user_id, conversation_id, title, details, due_date, objective, objective_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO actions (user_id, conversation_id, title, details, due_date)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO actions (user_id, conversation_id, title, details, due_date, objective, objective_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (user_id, conversation_id, title, details, due_date))
     action_id = cursor.lastrowid
 
@@ -312,7 +314,7 @@ def get_user_actions(user_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT a.id, a.title, a.details, a.due_date, a.status
+        SELECT a.id, a.title, a.details, a.due_date, a.status, a.objective, a.objective_id
         FROM actions a
         WHERE a.user_id = ?
         ORDER BY a.due_date ASC
@@ -327,7 +329,37 @@ def get_user_actions(user_id):
             'title': action[1],
             'details': action[2],
             'due_date': action[3],
-            'status': action[4]
+            'status': action[4],
+            'objective': action[5],
+            'objective_id': action[6]
+
+        }
+        for action in actions
+    ]
+
+def get_user_actions_by_objective(user_id, objective):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT a.id, a.title, a.details, a.due_date, a.status, a.objective, a.objective_id
+        FROM actions a
+        WHERE a.user_id = ? AND a.objective_id = ?
+        ORDER BY a.due_date ASC
+    ''', (user_id, objective))
+    actions = cursor.fetchall()
+    conn.close()
+
+    # Convert to list of dictionaries for easier handling in JavaScript
+    return [
+        {
+            'id': action[0],
+            'title': action[1],
+            'details': action[2],
+            'due_date': action[3],
+            'status': action[4],
+            'objective': action[5],
+            'objective_id': action[6]
+
         }
         for action in actions
     ]
@@ -408,6 +440,8 @@ def query_view2(session_id=None):
 
     session_ids = get_session_ids(user_id)
 
+
+
     if request.method == 'POST':
         prompt = request.form['prompt']
 
@@ -442,6 +476,7 @@ def query_view2(session_id=None):
         ''', (user_id, session_id))
         message_count = cursor.fetchone()[0]
         conn.close()
+
 
 
 
@@ -598,14 +633,34 @@ def new_session():
 
 #Actions page
 @app.route('/actions')
-def actions():
+@app.route('/actions/<objective>', methods=['POST', 'GET'])
+def actions(objective=None):
+    print(objective)
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('login'))
     session_ids = get_session_ids(user_id)
     user_actions = get_user_actions(user_id)
+    print(objective)
+    print(user_id)
+    actions = get_user_actions_by_objective(user_id, objective)
+
+    print(actions)
+
+    unique_objectives = {(item['objective'], item['objective_id']) for item in user_actions}
+    print(unique_objectives)
+
     user_name = get_user_name(user_id)
-    return render_template('actions.html', actions=user_actions, user_name=user_name, session_id=session['session_id'], session_ids=session_ids)
+
+    return render_template('actions.html',
+                           actions=actions,
+                           user_name=user_name,
+                           session_id=session.get('session_id'),
+                           session_ids=session_ids,
+                           objective=objective,
+                           unique_objectives=unique_objectives,
+                           )
+
 
 
 @app.route('/extract_actions', methods=['POST'])
@@ -620,7 +675,10 @@ def extract_actions():
     prompt = (
         "Extract actionable items from the following conversation. "
         "Respond with a JSON object containing an 'actions' key, which is an array of action objects. "
-        "Each action object should have 'title', 'details', and 'due_date' fields.\n\n"
+        "Each action object should have 'objective', 'objective_id, title', 'details', and 'due_date' fields. Objective should be the same across all generated actions."
+        "objective_id should be set to same value as 'objective' but converted to snake case."
+        "Make sure in the 'title' that the action is Specific, Measurable, Actionable, Realistic and Time bound/n/n"
+
     )
     prompt += "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation])
 
@@ -688,9 +746,9 @@ def save_actions(user_id, actions):
     cursor = conn.cursor()
     for action in actions:
         cursor.execute('''
-            INSERT INTO actions (user_id, conversation_id, title, details, due_date)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, session.get('session_id'), action['title'], action['details'], action['due_date']))
+            INSERT INTO actions (user_id, conversation_id, title, details, due_date, objective, objective_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, session.get('session_id'), action['title'], action['details'], action['due_date'], action['objective'], action['objective_id']))
     conn.commit()
     conn.close()
 
