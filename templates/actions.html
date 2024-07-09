@@ -42,16 +42,12 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-3" id="sessionsPanel">
-                <button id="newConversationBtn" class="btn btn-primary mb-3">Add New Conversation</button>
-
-                <h4>Previous Sessions</h4>
+                <h4>Your objectives</h4>
                 <div id="sessionsList">
                     <ul>
-                        {% for session_id, summary in session_ids %}
+                      {% for unique_objective in unique_objectives %}
                             <li>
-                                <a href="{{ url_for('query_view2', session_id=session_id) }}">
-                                    {{ summary | striptags | truncate(50, true, '...') }}
-                                </a>
+                              <a href="{{ url_for('actions', objective=unique_objective[1]) }}">{{ unique_objective[0]}}</a>
                             </li>
                         {% endfor %}
                     </ul>
@@ -59,37 +55,30 @@
             </div>
             <div class="col-md-9">
                 <div class="container-fluid p-3">
-                    <h3>Welcome, {{ user_name }}</h3>
-                    <h4>Your Active Actions</h4>
-                    <table class="table" id="activeActionsTable">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Details</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- This will be populated dynamically -->
-                        </tbody>
-                    </table>
+                    <h3>Your actions for {{objective}}</h3>
+                    {{user_actions}}
 
-                    <h4>Completed Actions</h4>
-                    <table class="table" id="completedActionsTable">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Details</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- This will be populated dynamically -->
-                        </tbody>
+                    <div id="actionList">
+
+                </div>
+                <div id ="actionList2">
+                  {% for action in actions %}
+                <div class="action-item">
+                <input type="checkbox" class="action-checkbox">
+                <div class="action-content">
+                    <h3 class="action-title">{{ action.title }}</h3>
+                    <p class="action-description">{{ action.details }}</p>
+                </div>
+                <div class="action-meta">
+                    <span class="action-due"></span>
+                    <button class="action-menu">⋮</button>
+                </div>
+              </div>
+              {% endfor %}
+
+            </div>
+
+
                     </table>
                 </div>
             </div>
