@@ -63,18 +63,18 @@
                 </div>
                 <div id ="actionList2">
                   {% for action in actions %}
-                <div class="action-item">
-                <input type="checkbox" class="action-checkbox">
-                <div class="action-content">
-                    <h3 class="action-title">{{ action.title }}</h3>
-                    <p class="action-description">{{ action.details }}</p>
-                </div>
-                <div class="action-meta">
-                    <span class="action-due"></span>
-                    <button class="action-menu">⋮</button>
-                </div>
-              </div>
-              {% endfor %}
+<div class="action-item" data-action-id="{{ action.id }}">
+    <input type="checkbox" class="action-checkbox" {% if action.status == 'completed' %}checked{% endif %}>
+    <div class="action-content">
+        <h3 class="action-title">{{ action.title }}</h3>
+        <p class="action-description">{{ action.details }}</p>
+    </div>
+    <div class="action-meta">
+        <span class="action-due">{{ action.due_date }}</span>
+        <button class="action-menu">⋮</button>
+    </div>
+</div>
+{% endfor %}
 
             </div>
 
@@ -237,6 +237,31 @@
             alert('This would start a new conversation in a real scenario.');
         });
     });
+
+    $(document).on('change', '.action-checkbox', function() {
+    var actionId = $(this).closest('.action-item').data('action-id');
+    var isCompleted = $(this).is(':checked');
+
+    if (isCompleted) {
+        $.ajax({
+            url: '/complete_action',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ action_id: actionId }),
+            success: function(response) {
+                if (response.success) {
+                    console.log('Action marked as completed');
+                    // You might want to update the UI here
+                } else {
+                    console.error('Failed to mark action as completed:', response.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error marking action as completed:', error);
+            }
+        });
+    }
+});
     </script>
 </body>
 </html>
