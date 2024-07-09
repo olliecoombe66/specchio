@@ -266,31 +266,6 @@
                     }
                 });
             }
-
-            $(document).on('change', '.action-checkbox', function() {
-            var actionId = $(this).closest('.action-item').data('action-id');
-            var isCompleted = $(this).is(':checked');
-
-            if (isCompleted) {
-                $.ajax({
-                    url: '/complete_action',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ action_id: actionId }),
-                    success: function(response) {
-                        if (response.success) {
-                            console.log('Action marked as completed');
-                            // You might want to update the UI here
-                        } else {
-                            console.error('Failed to mark action as completed:', response.error);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error marking action as completed:', error);
-                    }
-                });
-    }
-});
         });
     </script>
 </head>
@@ -323,7 +298,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-3" id="sessionsPanel">
-                    <button id="newConversationBtn" class="btn btn-primary mb-3">Add New Conversation</button>
+                    <button id="newConversationBtn" class="btn btn-primary mb-3">Start New Conversation</button>
 
                     <h4>Previous Sessions</h4>
                     <div id="sessionsList">
@@ -358,7 +333,7 @@
                         </div>
                         <div class="mb-4 float-end">
                         <ul class="list-group">
-                            <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Generate action plan</button>
+                            <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Generate actions</button>
                         </ul>
                     </div>
                     </div>
