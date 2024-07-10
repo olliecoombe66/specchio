@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from dotenv import load_dotenv
@@ -32,8 +32,21 @@ cipher_suite = Fernet(ENCRYPTION_KEY)
 # TODO - API key is being stored correctly, but currently not used in actual calls
 # TODO - need to find a way to set the client per session based on the appropriate API key and cascade through all functions to use this
 # Initialize OpenAI client
-client = OpenAI(
-    api_key=OPENAI_API_KEY) # Remove the square brackets
+# client = OpenAI(
+#     api_key=OPENAI_API_KEY) # Remove the square brackets
+
+def initialize_openai_client(user_id):
+    api_key = get_user_api_key(user_id)
+    client = OpenAI(api_key=api_key)
+    return client
+
+def get_openai_client(user_id):
+    client = session.get('openai_client')
+    if not client:
+        client = initialize_openai_client(user_id)
+    return client
+
+
 
 #Set up databases
 app = Flask(__name__, static_url_path='/static')
@@ -271,10 +284,9 @@ def load_conversation_history(user_id, session_id, limit=10):
 
 # Modify the get_completion function
 def get_completion(prompt, conversation_history):
-    user_id = session.get('user_id')
-    api_key = get_user_api_key(user_id)
+    user_id = session['user_id']
 
-    client = OpenAI(api_key=api_key)
+    client = get_openai_client(user_id)
 
     messages = [
         {"role": "system", "content": "You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."}
@@ -286,18 +298,37 @@ def get_completion(prompt, conversation_history):
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-    return response.choices[0].message.content
+    try:
+        # Retrieve end of api key
+        api_key_final_end_characters = f"API Key ends with: {client.api_key[-5:] if client.api_key else 'Empty'}"
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=1024,
+            n=1,
+            stop=None,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content +  f"\n\n[API Info: {api_key_final_end_characters}]"
+    except AuthenticationError as e:
+        error_message = f"Incorrect API key provided. You can find your API key at https://platform.openai.com/account/api-keys."
+        flash(error_message, 'error')
+        print(f"Authentication Error: {str(e)}")
+        return "I'm sorry, but there was an issue with the API key. Please check your settings and try again."
+    except Exception as e:
+        flash("An error occurred while processing your request. Please try again later.", 'error')
+        print(f"Error in get_completion: {str(e)}")
+        return "I apologize, but I encountered an error while processing your request. Please try again later."
+
 
 #Create a fuction to generate a summary using ChatGPT
 def generate_chat_summary(conversation_history):
+    user_id = session['user_id']
+
+    client = get_openai_client(user_id)
+
+
     messages = [
         {"role": "system", "content": "You are a summarization assistant. Provide a brief summary of the conversation. Limit to less than 5 words."}
     ]
@@ -433,8 +464,17 @@ def clear_reset_token(user_id):
     conn.commit()
     conn.close()
 
+@app.before_request
+def ensure_openai_client():
+    user_id = session.get('user_id')
+    if 'user_id' in session and 'openai_client' not in session:
+        initialize_openai_client(user_id)
+
 
 @app.route('/', methods=['POST', 'GET'])
+def query_view():
+    return render_template('landing-page.html')
+
 @app.route('/chat', methods=['POST', 'GET'])
 @app.route('/chat/<session_id>', methods=['POST', 'GET'])
 def query_view2(session_id=None):
@@ -470,6 +510,8 @@ def query_view2(session_id=None):
         conn.close()
         if result:
             using_custom_api = result[0]
+
+    initialize_openai_client(user_id)
 
     if request.method == 'POST':
         prompt = request.form['prompt']
@@ -533,15 +575,20 @@ def login():
 
         conn.close()
 
+        user_id = session.get('user_id')
+
+
         if user and check_password_hash(user[2], password):
             # Create a new session entry in the database
             session['session_id'] = generate_session_id()
             session['user_id'] = user[0]
-
-
             session['username'] = username
             session['conversation_history'] = load_conversation_history(user[0], session['session_id'])
-
+            
+            # Initialize OpenAI client
+            api_key = get_user_api_key(user[0])
+            session['openai_api_key'] = api_key
+            initialize_openai_client(user_id)
 
             return redirect(url_for('query_view2'))
         else:
@@ -697,6 +744,10 @@ def actions(objective=None):
 
 @app.route('/extract_actions', methods=['POST'])
 def extract_actions():
+    user_id = session['user_id']
+
+    client = get_openai_client(user_id)
+
     user_id = session.get('user_id')
     session_id = session.get('session_id')
 
@@ -830,9 +881,9 @@ def save_api_settings():
     if use_custom_key and custom_api_key:
         # Validate the API key
         try:
-            client = OpenAI(api_key=custom_api_key)
+            temp_client = OpenAI(api_key=custom_api_key)
             # Make a simple API call to check if the key is valid
-            client.models.list()
+            temp_client.models.list()
             
             # If we reach here, the key is valid
             encrypted_api_key = encrypt_api_key(custom_api_key)
@@ -843,6 +894,7 @@ def save_api_settings():
             return jsonify({'success': False, 'error': 'Failed to validate or encrypt API key'})
     else:
         encrypted_api_key = None
+        custom_api_key = OPENAI_API_KEY
 
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -852,6 +904,10 @@ def save_api_settings():
             VALUES (?, ?, ?)
         ''', (user_id, use_custom_key, encrypted_api_key))
         conn.commit()
+        
+        # Update OpenAI API key in session and reinitialize client
+        session['openai_api_key'] = custom_api_key
+        initialize_openai_client(user_id)
 
         return jsonify({'success': True})
     except Exception as e:
@@ -887,15 +943,19 @@ def get_user_api_key(user_id):
             use_custom_key, encrypted_api_key = result
             if use_custom_key and encrypted_api_key:
                 try:
-                    return decrypt_api_key(encrypted_api_key)
+                    api_key_type = 'custom'
+                    return decrypt_api_key(encrypted_api_key)# , api_key_type
                 except Exception as e:
+                    api_key_type = 'default'
                     print(f"Error decrypting API key: {e}")
                     # If decryption fails, fall back to default key
-                    return OPENAI_API_KEY
-        return OPENAI_API_KEY  # Return the default API key if no custom key is set
+                    return OPENAI_API_KEY# , api_key_type
+        api_key_type = 'default'
+        return OPENAI_API_KEY, api_key_type  # Return the default API key if no custom key is set
     except Exception as e:
         print(f"Error retrieving API key: {e}")
-        return OPENAI_API_KEY
+        api_key_type = 'default'
+        return OPENAI_API_KEY# , api_key_type
     finally:
         conn.close()
 
