@@ -3,13 +3,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from dotenv import load_dotenv
 import os
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError
 import markdown2
 import uuid
 from flask_mail import Mail, Message
 from datetime import datetime as dt, timedelta
 import json
 import logging
+from cryptography.fernet import Fernet
+import base64
 
 
 
@@ -23,7 +25,12 @@ MAIL_USE_TLS = os.getenv('MAIL_USE_TLS')
 MAIL_USERNAME = os.getenv('MAIL_USERNAME')
 MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
 
+# Generate a secret key for encrypting API keys
+ENCRYPTION_KEY = Fernet.generate_key()
+cipher_suite = Fernet(ENCRYPTION_KEY)
 
+# TODO - API key is being stored correctly, but currently not used in actual calls
+# TODO - need to find a way to set the client per session based on the appropriate API key and cascade through all functions to use this
 # Initialize OpenAI client
 client = OpenAI(
     api_key=OPENAI_API_KEY) # Remove the square brackets
@@ -114,6 +121,13 @@ def init_sqlite_db():
             expiration_time DATETIME
         )
     ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS user_settings (
+        user_id INTEGER PRIMARY KEY,
+        use_custom_key BOOLEAN DEFAULT FALSE,
+        api_key TEXT
+    )
+    ''')
     conn.commit()
     conn.close()
 
@@ -175,7 +189,7 @@ def get_session_ids(user_id):
     try:
         with sqlite3.connect('database.db') as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ? ORDER BY date_created DESC', (user_id,))
+            cursor.execute('SELECT session_id, summary FROM sessions WHERE user_id = ? ORDER BY date_created DESC', (user_id))
             sessions = cursor.fetchall()
         return [(session[0], session[1]) for session in sessions]
     except sqlite3.Error as e:
@@ -246,7 +260,6 @@ def load_conversation_history(user_id, session_id, limit=10):
             ORDER BY timestamp DESC
             LIMIT ?
         ''', (user_id, session_id, limit))
-
     messages = cursor.fetchall()
     conn.close()
 
@@ -258,6 +271,11 @@ def load_conversation_history(user_id, session_id, limit=10):
 
 # Modify the get_completion function
 def get_completion(prompt, conversation_history):
+    user_id = session.get('user_id')
+    api_key = get_user_api_key(user_id)
+
+    client = OpenAI(api_key=api_key)
+
     messages = [
         {"role": "system", "content": "You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."}
     ]
@@ -321,7 +339,6 @@ def get_user_actions(user_id):
     ''', (user_id,))
     actions = cursor.fetchall()
     conn.close()
-
     # Convert to list of dictionaries for easier handling in JavaScript
     return [
         {
@@ -373,7 +390,6 @@ def update_action(action_id, title, details, due_date, status):
         SET title = ?, details = ?, due_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     ''', (title, details, due_date, status, action_id))
-
     conn.commit()
     conn.close()
 
@@ -419,18 +435,20 @@ def clear_reset_token(user_id):
 
 
 @app.route('/', methods=['POST', 'GET'])
-def query_view():
-    return render_template('landing-page.html')
-
-
 @app.route('/chat', methods=['POST', 'GET'])
 @app.route('/chat/<session_id>', methods=['POST', 'GET'])
 def query_view2(session_id=None):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
     if 'conversation_history' not in session:
         session['conversation_history'] = []
+    print("help")
+    print(session_id)
     # Fetch user's name from the database using user_id stored in session
     user_id = session.get('user_id')
     user_name = get_user_name(user_id) if user_id else None
+
 
     # Determine the session_id to use
     if session_id is None:
@@ -440,7 +458,18 @@ def query_view2(session_id=None):
 
     session_ids = get_session_ids(user_id)
 
+    print("Sumamries")
+    print(session_ids)
 
+    using_custom_api = False
+    if user_id:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT use_custom_key FROM user_settings WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        conn.close()
+        if result:
+            using_custom_api = result[0]
 
     if request.method == 'POST':
         prompt = request.form['prompt']
@@ -478,16 +507,18 @@ def query_view2(session_id=None):
         conn.close()
 
 
+        print(message_count)
+
 
 
         if message_count == 2:  # Every 3 user messages
             summary = generate_chat_summary(session['conversation_history'])
-            update_session_summary(session_id, session['user_id'], summary, dt.now())
+            update_session_summary(session_id, session['user_id'], summary)
 
         session.modified = True
         return jsonify({'response': html_response})
 
-    return render_template('index.html', user_name=user_name, session_ids=session_ids, session_id=session_id)
+    return render_template('index.html', user_name=user_name, session_ids=session_ids, session_id=session_id, using_custom_api=using_custom_api)
 
 
 @app.route('/login2', methods=['GET', 'POST'])
@@ -576,6 +607,7 @@ def logout():
 def reset_password_request():
     if request.method == 'POST':
         email = request.form['email']
+        print(email)
         user = get_user_name_with_email(email)
 
         if user:
@@ -711,12 +743,10 @@ def extract_actions():
     except json.JSONDecodeError as e:
         logging.error(f"Failed to parse OpenAI response: {e}")
         actions = []
-
     # If no actions were extracted or if parsing failed, add a dummy action
     if not actions:
         logging.warning("No actions found or parsing failed. Adding dummy action.")
         actions = [{"title": "Dummy Action", "details": "No actions were identified in the conversation. This is a placeholder action.", "due_date": ""}]
-
     # Prepare debug information
     debug_info = {
         "request": {
@@ -726,7 +756,6 @@ def extract_actions():
         },
         "response": response.dict()  # Convert the response object to a dictionary
     }
-
     return jsonify({
         "actions": actions,
         "request": debug_info["request"],
@@ -758,35 +787,119 @@ def get_actions():
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'actions': []})
-
     actions = get_user_actions(user_id)
     return jsonify({'actions': actions})
 
-@app.route('/complete_action', methods=['POST'])
-def complete_action():
-    print("Action triggered")
+
+
+# Add a new route for the settings page
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'User not logged in'}), 401
+    user_name = get_user_name(user_id)
+    session_id = session.get('session_id')
+    
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT use_custom_key FROM user_settings WHERE user_id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
 
-    action_id = request.json.get('action_id')
-    if not action_id:
-        return jsonify({'success': False, 'error': 'No action_id provided'}), 400
+    use_custom_key = result[0] if result else False
 
+    # TODO - this should pass all relevant settings rather than individuals as booleans
+
+    return render_template('settings.html', user_name=user_name, session_id=session_id, use_custom_key=use_custom_key)
+
+# Add a new route to save API settings
+@app.route('/save_api_settings', methods=['POST'])
+def save_api_settings():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+
+    user_id = session['user_id']
+    api_key_choice = request.form['apiKeyChoice']
+    custom_api_key = request.form.get('customApiKey')
+
+    use_custom_key = api_key_choice == 'custom'
+    encrypted_api_key = None
+
+    if use_custom_key and custom_api_key:
+        # Validate the API key
+        try:
+            client = OpenAI(api_key=custom_api_key)
+            # Make a simple API call to check if the key is valid
+            client.models.list()
+            
+            # If we reach here, the key is valid
+            encrypted_api_key = encrypt_api_key(custom_api_key)
+        except AuthenticationError as e:
+            return jsonify({'success': False, 'error': str(e)})
+        except Exception as e:
+            print(f"Error validating or encrypting API key: {e}")
+            return jsonify({'success': False, 'error': 'Failed to validate or encrypt API key'})
+    else:
+        encrypted_api_key = None
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
         cursor.execute('''
-            UPDATE actions
-            SET status = 'completed', updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND user_id = ?
-        ''', (action_id, user_id))
+            INSERT OR REPLACE INTO user_settings (user_id, use_custom_key, api_key)
+            VALUES (?, ?, ?)
+        ''', (user_id, use_custom_key, encrypted_api_key))
         conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'message': 'Action marked as completed'})
-    except sqlite3.Error as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving API settings: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save settings'})
+    finally:
+        conn.close()
+
+
+
+
+# User API key collection
+
+def encrypt_api_key(api_key):
+    if not isinstance(api_key, str):
+        raise ValueError("API key must be a string")
+    return cipher_suite.encrypt(api_key.encode()).decode()
+
+def decrypt_api_key(encrypted_api_key):
+    if not isinstance(encrypted_api_key, str):
+        raise ValueError("Encrypted API key must be a string")
+    return cipher_suite.decrypt(encrypted_api_key.encode()).decode()
+
+# Add this function to get the user's API key
+def get_user_api_key(user_id):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT use_custom_key, api_key FROM user_settings WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            use_custom_key, encrypted_api_key = result
+            if use_custom_key and encrypted_api_key:
+                try:
+                    return decrypt_api_key(encrypted_api_key)
+                except Exception as e:
+                    print(f"Error decrypting API key: {e}")
+                    # If decryption fails, fall back to default key
+                    return OPENAI_API_KEY
+        return OPENAI_API_KEY  # Return the default API key if no custom key is set
+    except Exception as e:
+        print(f"Error retrieving API key: {e}")
+        return OPENAI_API_KEY
+    finally:
+        conn.close()
+
+    
 
 
 if __name__ == "__main__":
