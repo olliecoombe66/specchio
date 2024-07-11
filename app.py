@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from dotenv import load_dotenv
 import os
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError
 import markdown2
 import uuid
 from flask_mail import Mail, Message
@@ -112,6 +112,14 @@ def init_sqlite_db():
             user_id TEXT,
             token TEXT,
             expiration_time DATETIME
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS assistant_settings (
+            user_id TEXT PRIMARY KEY,
+            setting TEXT,
+            value TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
@@ -257,9 +265,29 @@ def load_conversation_history(user_id, session_id, limit=10):
 
 
 # Modify the get_completion function
-def get_completion(prompt, conversation_history):
+def get_completion(prompt, conversation_history, assistant_verbosity, assistant_mode):
+
+    # Adjust the system message based on verbosity and style
+    verbosity_levels = {
+        1: "Be very concise and to the point using minimal tokens.",
+        2: "Provide a balanced amount of information.",
+        3: "Be very detailed and thorough in your explanations, but still keep in mind that you should limit token use and not use too many words."
+    }
+
+    assistant_role_prompt = {
+        "coach": "You are a professional career coach who aims to help guide the end user to think carefully about things and come to their own conclusions.",
+        "expert": "You are an experienced professional with deep knowledge in career development and industry trends who aims to give solid advice to the user.",
+        "friend": "Ignore all other instructions and reply with the words 'hi, friend, this mode is just for verifying that it's working at the moment!'."
+    }
+
+    system_message = f"{assistant_role_prompt[assistant_mode]} {verbosity_levels[int(assistant_verbosity)]} \
+        You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. \
+         Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. \
+         Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. \
+         After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."
+
     messages = [
-        {"role": "system", "content": "You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."}
+        {"role": "system", "content": system_message}
     ]
 
     # Add conversation history
@@ -268,15 +296,29 @@ def get_completion(prompt, conversation_history):
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-    return response.choices[0].message.content
+    try:
+        # Retrieve end of api key
+        api_key_final_end_characters = f"API Key ends with: {client.api_key[-5:] if client.api_key else 'Empty'}"
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=1024,
+            n=1,
+            stop=None,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content + f"\n\n[API Info: {api_key_final_end_characters}]"
+    except AuthenticationError as e:
+        error_message = f"Incorrect API key provided. You can find your API key at https://platform.openai.com/account/api-keys."
+        flash(error_message, 'error')
+        print(f"Authentication Error: {str(e)}")
+        return "I'm sorry, but there was an issue with the API key. Please check your settings and try again."
+    except Exception as e:
+        flash("An error occurred while processing your request. Please try again later.", 'error')
+        print(f"Error in get_completion: {str(e)}")
+        return "I apologize, but I encountered an error while processing your request. Please try again later."
+
 
 #Create a fuction to generate a summary using ChatGPT
 def generate_chat_summary(conversation_history):
@@ -444,12 +486,14 @@ def query_view2(session_id=None):
 
     if request.method == 'POST':
         prompt = request.form['prompt']
+        assistant_verbosity = request.form['assistant_verbosity']
+        assistant_mode = request.form['assistant_mode']
 
         # Save user message
         save_message(user_id, 'user', session_id, prompt)
 
         # Get the response from ChatGPT
-        response = get_completion(prompt, session['conversation_history'])
+        response = get_completion(prompt, session['conversation_history'], assistant_verbosity, assistant_mode)
 
         # Save assistant message
         save_message(user_id, 'assistant', session_id, response)
@@ -786,6 +830,62 @@ def complete_action():
         return jsonify({'success': True, 'message': 'Action marked as completed'})
     except sqlite3.Error as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+# Add a new route to set completions parameters
+@app.route('/set_assistant_settings', methods=['POST'])
+def set_assistant_settings():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+    user_id = session['user_id']
+    assistant_verbosity = request.form.get('verbosity-slider')
+    assistant_role = request.form.get('role-dropdown')
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR REPLACE INTO assistant_settings (user_id, setting, value)
+            VALUES (?, ?, ?)
+        ''', (user_id, 'assistant_verbosity', assistant_verbosity))
+        conn.commit()
+        cursor.execute('''
+            INSERT OR REPLACE INTO assistant_settings (user_id, setting, value)
+            VALUES (?, ?, ?)
+        ''', (user_id, 'assistant_role', assistant_role))
+        conn.commit()
+
+    except Exception as e:
+        print(f"Error saving assistant settings: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save settings'})
+    finally:
+        conn.close()
+
+def get_assistant_settings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session.get('user_id')
+
+    assistant_verbosity = request.form.get('verbosity-slider')
+    assistant_role = request.form.get('role-dropdown')
+
+    return assistant_verbosity, assistant_role
+
+
+    # conn = sqlite3.connect('database.db')
+    # cursor = conn.cursor()
+    # cursor.execute('SELECT user_id, setting, value FROM user_settings WHERE user_id = ?', (user_id,))
+    # result = cursor.fetchone()
+    # conn.close()
+
+    # use_custom_key = result[0] if result else False
+
+    # # TODO - this should pass all relevant settings rather than individuals as booleans
+
+    return render_template('settings.html', user_name=user_name, session_id=session_id, use_custom_key=use_custom_key)
+
 
 
 
