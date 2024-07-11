@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SamurAI Chat - Settings</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.0/dist/js.cookie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
+        crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css"
+        integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
+        <!-- Favicons -->
+        <link href="{{ url_for('static', filename='/assets/img/favicon/favicon.ico') }}" rel="icon">
+        <link href="{{ url_for('static', filename='/assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
+
+    <!-- Include the same CSS and JS files as in index.html -->
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">
+            <img src="{{ url_for('static', filename='/assets/img/Logo.png') }}" width="80%" height="30"
+                style="margin-left: 25px;" class="d-inline-block align-top" alt="Logo">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">        <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('query_view2', session_id=session_id) }}">Conversations</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('actions') }}">Actions</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('settings') }}">Settings</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container mt-5">
+        <h2>API Settings</h2>
+        <form id="apiSettingsForm">
+            <div class="mb-3">
+                <label for="apiKeyChoice" class="form-label">API Key Choice</label>
+                <select class="form-select" id="apiKeyChoice" name="apiKeyChoice">
+                    <option value="default" {% if not use_custom_key %}selected{% endif %}>Use SamurAI API key (rate limited)</option>
+                    <option value="custom" {% if use_custom_key %}selected{% endif %}>Use own API key</option>
+                </select>
+            </div>
+            <div class="mb-3" id="customApiKeyField" style="display: none;">
+                <label for="customApiKey" class="form-label">Your OpenAI API Key</label>
+                <input type="password" class="form-control" id="customApiKey" name="customApiKey">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('apiKeyChoice').addEventListener('change', function() {
+            const customApiKeyField = document.getElementById('customApiKeyField');
+            customApiKeyField.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+
+        document.getElementById('apiSettingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/save_api_settings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Settings saved successfully');
+                } else {
+                    alert('Error saving settings: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving settings');
+            });
+        });
+    </script>
+</body>
+</html>

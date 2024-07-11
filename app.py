@@ -1,16 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from dotenv import load_dotenv
 import os
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError
 import markdown2
 import uuid
 from flask_mail import Mail, Message
 from datetime import datetime as dt, timedelta
 import json
 import logging
-
+from cryptography.fernet import Fernet
+import base64
 
 
 #get environment variables
@@ -23,10 +24,25 @@ MAIL_USE_TLS = os.getenv('MAIL_USE_TLS')
 MAIL_USERNAME = os.getenv('MAIL_USERNAME')
 MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
 
+# Generate a secret key for encrypting API keys
+ENCRYPTION_KEY = Fernet.generate_key()
+cipher_suite = Fernet(ENCRYPTION_KEY)
 
+# TODO - API key is being stored correctly, but currently not used in actual calls
+# TODO - need to find a way to set the client per session based on the appropriate API key and cascade through all functions to use this
 # Initialize OpenAI client
-client = OpenAI(
-    api_key=OPENAI_API_KEY) # Remove the square brackets
+
+
+def initialize_openai_client(user_id):
+    api_key = get_user_api_key(user_id)
+    client = OpenAI(api_key=api_key)
+    return client
+
+def get_openai_client(user_id):
+    client = session.get('openai_client')
+    if not client:
+        client = initialize_openai_client(user_id)
+    return client
 
 #Set up databases
 app = Flask(__name__, static_url_path='/static')
@@ -113,6 +129,13 @@ def init_sqlite_db():
             token TEXT,
             expiration_time DATETIME
         )
+    ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS user_settings (
+        user_id INTEGER PRIMARY KEY,
+        use_custom_key BOOLEAN DEFAULT FALSE,
+        api_key TEXT
+    )
     ''')
     conn.commit()
     conn.close()
@@ -258,6 +281,10 @@ def load_conversation_history(user_id, session_id, limit=10):
 
 # Modify the get_completion function
 def get_completion(prompt, conversation_history):
+    user_id = session['user_id']
+
+    client = get_openai_client(user_id)
+
     messages = [
         {"role": "system", "content": "You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."}
     ]
@@ -268,18 +295,36 @@ def get_completion(prompt, conversation_history):
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-    return response.choices[0].message.content
+    try:
+        # Retrieve end of api key
+        api_key_final_end_characters = f"API Key ends with: {client.api_key[-5:] if client.api_key else 'Empty'}"
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=1024,
+            n=1,
+            stop=None,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content +  f"\n\n[API Info: {api_key_final_end_characters}]"
+    except AuthenticationError as e:
+        error_message = f"Incorrect API key provided. You can find your API key at https://platform.openai.com/account/api-keys."
+        flash(error_message, 'error')
+        print(f"Authentication Error: {str(e)}")
+        return "I'm sorry, but there was an issue with the API key. Please check your settings and try again."
+    except Exception as e:
+        flash("An error occurred while processing your request. Please try again later.", 'error')
+        print(f"Error in get_completion: {str(e)}")
+        return "I apologize, but I encountered an error while processing your request. Please try again later."
+
 
 #Create a fuction to generate a summary using ChatGPT
 def generate_chat_summary(conversation_history):
+    user_id = session['user_id']
+
+    client = get_openai_client(user_id)
+    
     messages = [
         {"role": "system", "content": "You are a summarization assistant. Provide a brief summary of the conversation. Limit to less than 5 words."}
     ]
@@ -417,6 +462,12 @@ def clear_reset_token(user_id):
     conn.commit()
     conn.close()
 
+@app.before_request
+def ensure_openai_client():
+    user_id = session.get('user_id')
+    if 'user_id' in session and 'openai_client' not in session:
+        initialize_openai_client(user_id)
+
 
 @app.route('/', methods=['POST', 'GET'])
 def query_view():
@@ -426,6 +477,9 @@ def query_view():
 @app.route('/chat', methods=['POST', 'GET'])
 @app.route('/chat/<session_id>', methods=['POST', 'GET'])
 def query_view2(session_id=None):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
     if 'conversation_history' not in session:
         session['conversation_history'] = []
     # Fetch user's name from the database using user_id stored in session
@@ -439,8 +493,21 @@ def query_view2(session_id=None):
         session['session_id'] = session_id  # Update session_id in session
 
     session_ids = get_session_ids(user_id)
+    
+    print("Sumamries") 
+    print(session_ids)
 
+    using_custom_api = False
+    if user_id:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT use_custom_key FROM user_settings WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        conn.close()
+        if result:
+            using_custom_api = result[0]
 
+    initialize_openai_client(user_id)
 
     if request.method == 'POST':
         prompt = request.form['prompt']
@@ -477,7 +544,7 @@ def query_view2(session_id=None):
         message_count = cursor.fetchone()[0]
         conn.close()
 
-
+        print(message_count)
 
 
         if message_count == 2:  # Every 3 user messages
@@ -487,7 +554,7 @@ def query_view2(session_id=None):
         session.modified = True
         return jsonify({'response': html_response})
 
-    return render_template('index.html', user_name=user_name, session_ids=session_ids, session_id=session_id)
+    return render_template('index.html', user_name=user_name, session_ids=session_ids, session_id=session_id, using_custom_api=using_custom_api)
 
 
 @app.route('/login2', methods=['GET', 'POST'])
@@ -501,6 +568,8 @@ def login():
         user = cursor.fetchone()
 
         conn.close()
+        
+        user_id = session.get('user_id')
 
         if user and check_password_hash(user[2], password):
             # Create a new session entry in the database
@@ -511,6 +580,10 @@ def login():
             session['username'] = username
             session['conversation_history'] = load_conversation_history(user[0], session['session_id'])
 
+            # Initialize OpenAI client  
+            api_key = get_user_api_key(user[0])
+            session['openai_api_key'] = api_key
+            initialize_openai_client(user_id)
 
             return redirect(url_for('query_view2'))
         else:
@@ -576,6 +649,7 @@ def logout():
 def reset_password_request():
     if request.method == 'POST':
         email = request.form['email']
+        print(email)
         user = get_user_name_with_email(email)
 
         if user:
@@ -665,6 +739,10 @@ def actions(objective=None):
 
 @app.route('/extract_actions', methods=['POST'])
 def extract_actions():
+    user_id = session['user_id']
+
+    client = get_openai_client(user_id)
+
     user_id = session.get('user_id')
     session_id = session.get('session_id')
 
@@ -787,7 +865,121 @@ def complete_action():
     except sqlite3.Error as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Add a new route for the settings page
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session.get('user_id')
+    user_name = get_user_name(user_id)
+    session_id = session.get('session_id')
 
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT use_custom_key FROM user_settings WHERE user_id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    use_custom_key = result[0] if result else False
+
+    # TODO - this should pass all relevant settings rather than individuals as booleans
+
+    return render_template('settings.html', user_name=user_name, session_id=session_id, use_custom_key=use_custom_key)
+
+# Add a new route to save API settings
+@app.route('/save_api_settings', methods=['POST'])
+def save_api_settings():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+
+    user_id = session['user_id']
+    api_key_choice = request.form['apiKeyChoice']
+    custom_api_key = request.form.get('customApiKey')
+
+    use_custom_key = api_key_choice == 'custom'
+    encrypted_api_key = None
+
+    if use_custom_key and custom_api_key:
+        # Validate the API key
+        try:
+            temp_client = OpenAI(api_key=custom_api_key)
+            # Make a simple API call to check if the key is valid
+            temp_client.models.list()
+
+            # If we reach here, the key is valid
+            encrypted_api_key = encrypt_api_key(custom_api_key)
+        except AuthenticationError as e:
+            return jsonify({'success': False, 'error': str(e)})
+        except Exception as e:
+            print(f"Error validating or encrypting API key: {e}")
+            return jsonify({'success': False, 'error': 'Failed to validate or encrypt API key'})
+    else:
+        encrypted_api_key = None
+        custom_api_key = OPENAI_API_KEY
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR REPLACE INTO user_settings (user_id, use_custom_key, api_key)
+            VALUES (?, ?, ?)
+        ''', (user_id, use_custom_key, encrypted_api_key))
+        conn.commit()
+
+        # Update OpenAI API key in session and reinitialize client
+        session['openai_api_key'] = custom_api_key
+        initialize_openai_client(user_id)
+
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving API settings: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save settings'})
+    finally:
+        conn.close()
+
+
+
+
+# User API key collection
+
+def encrypt_api_key(api_key):
+    if not isinstance(api_key, str):
+        raise ValueError("API key must be a string")
+    return cipher_suite.encrypt(api_key.encode()).decode()
+
+def decrypt_api_key(encrypted_api_key):
+    if not isinstance(encrypted_api_key, str):
+        raise ValueError("Encrypted API key must be a string")
+    return cipher_suite.decrypt(encrypted_api_key.encode()).decode()
+
+# Add this function to get the user's API key
+def get_user_api_key(user_id):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT use_custom_key, api_key FROM user_settings WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+
+        if result:
+            use_custom_key, encrypted_api_key = result
+            if use_custom_key and encrypted_api_key:
+                try:
+                    api_key_type = 'custom'
+                    return decrypt_api_key(encrypted_api_key)
+                except Exception as e:
+                    api_key_type = 'default'
+                    print(f"Error decrypting API key: {e}")
+                    # If decryption fails, fall back to default key
+                    return OPENAI_API_KEY, api_key_type
+        api_key_type = 'default'
+        return OPENAI_API_KEY, api_key_type  # Return the default API key if no custom key is set
+    except Exception as e:
+        print(f"Error retrieving API key: {e}")
+        api_key_type = 'default'
+        return OPENAI_API_KEY, api_key_type
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     app.run(debug=True)
