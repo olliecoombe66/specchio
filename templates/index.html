@@ -18,7 +18,24 @@
         <link href="{{ url_for('static', filename='/assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
 
 
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16638930799"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
 
+          gtag('config', 'AW-16638930799');
+        </script>
+        <!-- Event snippet for Purchase conversion page -->
+        <script>
+          gtag('event', 'conversion', {
+              'send_to': 'AW-16638930799/bJugCPeZsMEZEO_eh_49',
+              'value': 1.0,
+              'currency': 'GBP',
+              'transaction_id': 'viewed_homepage''
+          });
+        </script>
 
     <script>
       $(document).ready(function() {
