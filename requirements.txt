@@ -19,6 +19,7 @@ distro==1.9.0
 docopt==0.6.2
 executing==2.0.1
 fastjsonschema==2.20.0
+fernet==1.0.1
 Flask==3.0.3
 Flask-Mail==0.10.0
 Flask-OAuthlib==0.9.6
@@ -58,6 +59,7 @@ platformdirs==4.2.2
 prompt_toolkit==3.0.47
 ptyprocess==0.7.0
 pure-eval==0.2.2
+pyaes==1.6.1
 pydantic==2.7.4
 pydantic_core==2.18.4
 Pygments==2.18.0
