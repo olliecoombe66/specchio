@@ -19,7 +19,24 @@
     <link href="{{ url_for('static', filename='/assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
 
 
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16638930799"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
 
+          gtag('config', 'AW-16638930799');
+        </script>
+        <!-- Event snippet for Purchase conversion page -->
+        <script>
+          gtag('event', 'conversion', {
+              'send_to': 'AW-16638930799/bJugCPeZsMEZEO_eh_49',
+              'value': 1.0,
+              'currency': 'GBP',
+              'transaction_id': 'viewed_homepage''
+          });
+        </script>
 
     <script>
         $(document).ready(function () {
@@ -316,6 +333,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('actions') }}">Actions</a>
                 </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('settings') }}">Settings</a>
+                    </li>
                 <li class="nav-item">
                     <a class="nav-item nav-link btn btn" href="{{ url_for('logout') }}">Logout</a>
                 </li>
@@ -346,6 +366,13 @@
                 <div class="container-fluid chat-container p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h3>Welcome {{user_name}}</h3>
+                        <div id="apiKeyInfo" class="mb-3">
+                            {% if using_custom_api %}
+                                <p>Currently using own API key</p>
+                            {% else %}
+                                <p>Currently using SamurAI API key</p>
+                            {% endif %}
+                        </div>
                         <div>
                             <div class="slider-container">
                                 <label for="verbositySlider">Verbosity:</label>
