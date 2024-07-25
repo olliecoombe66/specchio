@@ -304,3 +304,15 @@ mb-4 {
     color: #5f6368;
     cursor: pointer;
 }
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.slider-container label {
+  margin-right: 10px;
+}
+#verbositySlider {
+  width: 200px;
+}
