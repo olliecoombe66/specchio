@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Samurai Chat - Context</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">
+            <img src="{{ url_for('static', filename='/assets/img/Logo.png') }}" width="80%" height="30" style="margin-left: 25px;" class="d-inline-block align-top" alt="Logo">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('query_view2', session_id=session_id) }}">Conversations</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('actions') }}">Actions</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('context') }}">Context</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('settings') }}">Settings</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <h2>Context</h2>
+        <ul class="nav nav-tabs" id="contextTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab" aria-controls="personal" aria-selected="true">Personal</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="colleagues-tab" data-bs-toggle="tab" data-bs-target="#colleagues" type="button" role="tab" aria-controls="colleagues" aria-selected="false">Colleagues</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="organisation-tab" data-bs-toggle="tab" data-bs-target="#organisation" type="button" role="tab" aria-controls="organisation" aria-selected="false">Organisation</button>
+            </li>
+        </ul>
+        <div class="tab-content mt-3" id="contextTabContent">
+            <div class="tab-pane fade show active" id="personal" role="tabpanel" aria-labelledby="personal-tab">
+                <form id="personalForm">
+                    <div class="mb-3">
+                        <label for="jobRole" class="form-label">Job Role</label>
+                        <input type="text" class="form-control" id="jobRole" name="jobRole">
+                    </div>
+                    <div class="mb-3">
+                        <label for="level" class="form-label">Level</label>
+                        <input type="text" class="form-control" id="level" name="level">
+                    </div>
+                    <div class="mb-3">
+                        <label for="goals" class="form-label">Goals</label>
+                        <textarea class="form-control" id="goals" name="goals" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="strengths" class="form-label">Strengths</label>
+                        <textarea class="form-control" id="strengths" name="strengths" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="weaknesses" class="form-label">Areas for Improvement</label>
+                        <textarea class="form-control" id="weaknesses" name="weaknesses" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="additionalInfo" class="form-label">Additional Information</label>
+                        <textarea class="form-control" id="additionalInfo" name="additionalInfo" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Personal Information</button>
+                </form>
+            </div>
+            <div class="tab-pane fade" id="colleagues" role="tabpanel" aria-labelledby="colleagues-tab">
+                <div class="mb-3">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addColleagueModal">
+                        Add Colleague
+                    </button>
+                </div>
+                <div id="colleaguesList" class="row">
+                    <!-- Colleague cards will be dynamically added here -->
+                </div>
+            </div>
+            <div class="tab-pane fade" id="organisation" role="tabpanel" aria-labelledby="organisation-tab">
+                <form id="organisationForm">
+                    <div class="mb-3">
+                        <label for="industry" class="form-label">Industry</label>
+                        <input type="text" class="form-control" id="industry" name="industry">
+                    </div>
+                    <div class="mb-3">
+                        <label for="employeeCount" class="form-label">Employee Count</label>
+                        <input type="number" class="form-control" id="employeeCount" name="employeeCount">
+                    </div>
+                    <div class="mb-3">
+                        <label for="orgDescription" class="form-label">Organisation Description</label>
+                        <textarea class="form-control" id="orgDescription" name="orgDescription" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Organisation Information</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Colleague Modal -->
+    <div class="modal fade" id="addColleagueModal" tabindex="-1" aria-labelledby="addColleagueModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addColleagueModalLabel">Add Colleague</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addColleagueForm">
+                        <div class="mb-3">
+                            <label for="colleagueName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="colleagueName" name="colleagueName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="colleagueJobTitle" class="form-label">Job Title</label>
+                            <input type="text" class="form-control" id="colleagueJobTitle" name="colleagueJobTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="colleagueRelationship" class="form-label">Relationship</label>
+                            <select class="form-select" id="colleagueRelationship" name="colleagueRelationship" required>
+                                <option value="">Select relationship</option>
+                                <option value="peer">Peer</option>
+                                <option value="manager">Manager</option>
+                                <option value="direct_report">Direct Report</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="colleagueNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="colleagueNotes" name="colleagueNotes" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveColleague">Save Colleague</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inline the context data
+        var contextData = {{ context_data | tojson | safe }};
+
+        $(document).ready(function() {
+            // Populate forms immediately
+            populateContextData(contextData);
+
+            // Personal form submission
+            $('#personalForm').submit(function(e) {
+                e.preventDefault();
+                var formData = {
+                    jobRole: $('#jobRole').val(),
+                    level: $('#level').val(),
+                    goals: $('#goals').val(),
+                    strengths: $('#strengths').val(),
+                    weaknesses: $('#weaknesses').val(),
+                    additionalInfo: $('#additionalInfo').val()
+                };
+                saveContextData('/save_personal_context', formData, 'Personal information');
+            });
+
+            // Organisation form submission
+            $('#organisationForm').submit(function(e) {
+                e.preventDefault();
+                var formData = {
+                    industry: $('#industry').val(),
+                    employeeCount: $('#employeeCount').val(),
+                    orgDescription: $('#orgDescription').val()
+                };
+                saveContextData('/save_organisation_context', formData, 'Organisation information');
+            });
+
+            // Add colleague
+            $('#saveColleague').click(function() {
+                var colleagueData = {
+                    name: $('#colleagueName').val(),
+                    jobTitle: $('#colleagueJobTitle').val(),
+                    relationship: $('#colleagueRelationship').val(),
+                    notes: $('#colleagueNotes').val()
+                };
+                saveContextData('/save_colleague', colleagueData, 'Colleague', function(response) {
+                    if (response.success) {
+                        addColleagueCard(colleagueData, response.id);
+                        $('#addColleagueModal').modal('hide');
+                        $('#addColleagueForm')[0].reset();
+                    }
+                });
+            });
+
+            function saveContextData(url, data, dataType, callback) {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        if (response.success) {
+                            alert(dataType + ' saved successfully');
+                            if (callback) callback(response);
+                        } else {
+                            alert('Failed to save ' + dataType.toLowerCase() + ': ' + response.error);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error saving ' + dataType.toLowerCase() + ': ' + error);
+                    }
+                });
+            }
+
+            function addColleagueCard(colleague, id) {
+                var card = `
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">${colleague.name || 'N/A'}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${colleague.jobTitle || 'N/A'}</h6>
+                                <p class="card-text">Relationship: ${colleague.relationship || 'N/A'}</p>
+                                <button class="btn btn-sm btn-primary view-colleague" data-colleague='${JSON.stringify(colleague)}' data-id="${id}">View Profile</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('#colleaguesList').append(card);
+            }
+
+            // View colleague profile
+            $(document).on('click', '.view-colleague', function() {
+                var colleague = $(this).data('colleague');
+                var id = $(this).data('id');
+                // TODO: Implement colleague profile view
+                console.log('View colleague:', colleague, 'ID:', id);
+            });
+
+            function populateContextData(data) {
+                console.log("Populating context data:", data);  // Debug log
+                
+                // Populate personal data
+                  if (data.personal && Array.isArray(data.personal)) {
+                    $('#jobRole').val(data.personal[1] || '');  // Assuming job_role is the second element
+                    $('#level').val(data.personal[2] || '');
+                    $('#goals').val(data.personal[3] || '');
+                    $('#strengths').val(data.personal[4] || '');
+                    $('#weaknesses').val(data.personal[5] || '');
+                    $('#additionalInfo').val(data.personal[6] || '');
+                }
+
+
+                // Populate colleagues
+                $('#colleaguesList').empty(); // Clear existing colleague cards
+                if (data.colleagues && data.colleagues.length > 0) {
+                    data.colleagues.forEach(function(colleague) {
+                        addColleagueCard({
+                            name: colleague[2] || 'N/A',  // Assuming name is the third element
+                            jobTitle: colleague[3] || 'N/A',
+                            relationship: colleague[4] || 'N/A',
+                            notes: colleague[5] || 'N/A'
+                        }, colleague[0]);  // Assuming id is the first element
+                    });
+                }
+
+                // Populate organisation data
+                if (data.organisation && Array.isArray(data.organisation)) {
+                    $('#industry').val(data.organisation[1] || '');  // Assuming industry is the second element
+                    $('#employeeCount').val(data.organisation[2] || '');
+                    $('#orgDescription').val(data.organisation[3] || '');
+                }
+
+                // Debug logs
+                console.log("Personal data populated:", $('#jobRole').val(), $('#level').val(), $('#goals').val());
+                console.log("Organisation data populated:", $('#industry').val(), $('#employeeCount').val(), $('#orgDescription').val());
+            }
+        });
+    </script>
+</body>
+</html>

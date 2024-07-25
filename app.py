@@ -108,7 +108,7 @@ def init_sqlite_db():
             details TEXT,
             due_date DATE,
             status TEXT DEFAULT 'pending',
-            objective TEXT
+            objective TEXT,
             objective_id TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -144,6 +144,35 @@ def init_sqlite_db():
             setting TEXT,
             value TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS context_personal (
+            user_id INTEGER PRIMARY KEY,
+            job_role TEXT,
+            level TEXT,
+            goals TEXT,
+            strengths TEXT,
+            weaknesses TEXT,
+            additional_info TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS context_colleagues (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            name TEXT,
+            job_title TEXT,
+            relationship TEXT,
+            notes TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS context_organisation (
+            user_id INTEGER PRIMARY KEY,
+            industry TEXT,
+            employee_count INTEGER,
+            description TEXT
         )
     ''')
     conn.commit()
@@ -1026,6 +1055,151 @@ def save_api_settings():
         conn.close()
 
 
+
+@app.route('/save_personal_context', methods=['POST'])
+def save_personal_context():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+    user_id = session['user_id']
+    data = request.json
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR REPLACE INTO context_personal 
+            (user_id, job_role, level, goals, strengths, weaknesses, additional_info)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, data['jobRole'], data['level'], data['goals'], data['strengths'], data['weaknesses'], data['additionalInfo']))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving personal context: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save personal context'})
+    finally:
+        conn.close()
+
+@app.route('/save_colleague', methods=['POST'])
+def save_colleague():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+    user_id = session['user_id']
+    data = request.json
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO context_colleagues 
+            (user_id, name, job_title, relationship, notes)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, data['name'], data['jobTitle'], data['relationship'], data['notes']))
+        conn.commit()
+        return jsonify({'success': True, 'id': cursor.lastrowid})
+    except Exception as e:
+        print(f"Error saving colleague: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save colleague'})
+    finally:
+        conn.close()
+
+@app.route('/save_organisation_context', methods=['POST'])
+def save_organisation_context():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+    user_id = session['user_id']
+    data = request.json
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR REPLACE INTO context_organisation 
+            (user_id, industry, employee_count, description)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, data['industry'], data['employeeCount'], data['orgDescription']))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving organisation context: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save organisation context'})
+    finally:
+        conn.close()
+
+@app.route('/get_context_data', methods=['GET'])
+def get_context_data():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'User not logged in'})
+
+    user_id = session['user_id']
+
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row  # This allows accessing columns by name
+    cursor = conn.cursor()
+    try:
+        # Get personal context
+        cursor.execute('SELECT * FROM context_personal WHERE user_id = ?', (user_id,))
+        personal_data = cursor.fetchone()
+
+        # Get colleagues
+        cursor.execute('SELECT * FROM context_colleagues WHERE user_id = ?', (user_id,))
+        colleagues_data = cursor.fetchall()
+
+        # Get organisation context
+        cursor.execute('SELECT * FROM context_organisation WHERE user_id = ?', (user_id,))
+        organisation_data = cursor.fetchone()
+
+        context_data = {
+            'personal': dict(personal_data) if personal_data else {},
+            'colleagues': [dict(row) for row in colleagues_data],
+            'organisation': dict(organisation_data) if organisation_data else {}
+        }
+        
+        print("Context data being sent:", context_data)  # Debug print
+
+        return jsonify({'success': True, 'data': context_data})
+    except Exception as e:
+        print(f"Error retrieving context data: {e}")
+        return jsonify({'success': False, 'error': 'Failed to retrieve context data'})
+    finally:
+        conn.close()
+
+# Update the context route to include the data retrieval
+@app.route('/context')
+def context():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session.get('user_id')
+    user_name = get_user_name(user_id)
+    session_id = session.get('session_id')
+    
+    # Fetch context data
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM context_personal WHERE user_id = ?', (user_id,))
+        personal_data = cursor.fetchone()
+        
+        cursor.execute('SELECT * FROM context_colleagues WHERE user_id = ?', (user_id,))
+        colleagues_data = cursor.fetchall()
+        
+        cursor.execute('SELECT * FROM context_organisation WHERE user_id = ?', (user_id,))
+        organisation_data = cursor.fetchone()
+        
+        context_data = {
+            'personal': personal_data,
+            'colleagues': colleagues_data,
+            'organisation': organisation_data
+        }
+    except Exception as e:
+        print(f"Error fetching context data: {e}")
+        context_data = None
+    finally:
+        conn.close()
+    
+    return render_template('context.html', user_name=user_name, session_id=session_id, context_data=context_data)
 
 
 # User API key collection
