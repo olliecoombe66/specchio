@@ -34,10 +34,22 @@ cipher_suite = Fernet(ENCRYPTION_KEY)
 
 
 def initialize_openai_client(user_id):
-    api_key = get_user_api_key(user_id)
-    client = OpenAI(api_key=api_key)
-    return client
-
+    api_key, key_type = get_user_api_key(user_id)
+    try:
+        client = OpenAI(api_key=api_key)
+        # Test the API key with a simple request
+        client.models.list()
+        return client
+    except AuthenticationError:
+        if key_type == 'default':
+            print("Default API key is invalid. Please check your environment variables.")
+        else:
+            print("Custom API key is invalid. Please check your settings.")
+        return None
+    except Exception as e:
+        print(f"Error initializing OpenAI client: {e}")
+        return None
+    
 def get_openai_client(user_id):
     client = session.get('openai_client')
     if not client:
@@ -323,7 +335,9 @@ def get_completion(prompt, conversation_history, assistant_verbosity, assistant_
 
     client = get_openai_client(user_id)
 
-    
+    if not client:
+        return "I'm sorry, but there was an issue with the API key. Please check your settings and try again."
+
     # Adjust the system message based on verbosity and style
     verbosity_levels = {
         1: "Be very concise and to the point using minimal tokens.",
@@ -1227,7 +1241,7 @@ def get_user_api_key(user_id):
             if use_custom_key and encrypted_api_key:
                 try:
                     api_key_type = 'custom'
-                    return decrypt_api_key(encrypted_api_key)
+                    return decrypt_api_key(encrypted_api_key), api_key_type
                 except Exception as e:
                     api_key_type = 'default'
                     print(f"Error decrypting API key: {e}")
