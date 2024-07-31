@@ -139,7 +139,7 @@ h2,h3,h4 {
     }
 
 #sessionsPanel {
-  height: 80vh;
+  height: 100vh;
   overflow-y: auto;
   border-right: 1px solid #ccc;
   padding: 15px;
