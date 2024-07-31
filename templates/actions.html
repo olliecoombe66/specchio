@@ -1,59 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Samurai Chat - Actions</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.0/dist/js.cookie.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
-    <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
+{% extends "base.html" %}
+
+{% block title %}SamurAI Career Coach - Actions{% endblock %}
+
+
+{% block extra_head %}
     <style>
         .status-dropdown {
             border: none;
             background-color: transparent;
         }
-    </style>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-16638930799"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+        </style>
+{% endblock %}  
 
-  gtag('config', 'AW-16638930799');
-</script>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">
-            <img src="{{ url_for('static', filename='/assets/img/Logo.png') }}" width="80%" height="30" style="margin-left: 25px;" class="d-inline-block align-top" alt="Logo">
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('query_view2', session_id=session_id) }}">Conversations</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="{{ url_for('actions') }}">Actions</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('context') }}">Context</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="{{ url_for('settings') }}">Settings</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
+{% block content %}
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-3" id="sessionsPanel">
@@ -132,7 +91,10 @@
             </div>
         </div>
     </div>
+{% endblock %}  
 
+
+{% block extra_scripts %}
     <script>
         $(document).ready(function() {
             var statusOptions = [
@@ -278,5 +240,4 @@
     }
 });
     </script>
-</body>
-</html>
+{% endblock %}
