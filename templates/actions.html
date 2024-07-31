@@ -1,198 +1,159 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Samurai Chat - Actions</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.0/dist/js.cookie.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e" crossorigin="anonymous">
-    <link rel="stylesheet" href="{{ url_for('static', filename='/css/style.css') }}">
-    <style>
-        .status-dropdown {
-            border: none;
-            background-color: transparent;
-        }
-    </style>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-16638930799"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+{% extends "base.html" %}
 
-  gtag('config', 'AW-16638930799');
-</script>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">
-            <img src="{{ url_for('static', filename='/assets/img/Logo.png') }}" width="80%" height="30" style="margin-left: 25px;" class="d-inline-block align-top" alt="Logo">
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('query_view2', session_id=session_id) }}">Conversations</a>
+{% block title %}SamurAI Career Coach - Actions{% endblock %}
+
+
+{% block extra_head %}
+<style>
+    .status-dropdown {
+        border: none;
+        background-color: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3" id="sessionsPanel">
+        <h4>Your objectives</h4>
+        <div id="sessionsList">
+            <ul>
+                {% for unique_objective in unique_objectives %}
+                <li>
+                    <a href="{{ url_for('actions', objective=unique_objective[1]) }}">{{ unique_objective[0]}}</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="{{ url_for('actions') }}">Actions</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('context') }}">Context</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="{{ url_for('settings') }}">Settings</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                </li>
+                {% endfor %}
             </ul>
         </div>
-    </nav>
-
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-3" id="sessionsPanel">
-                <h4>Your objectives</h4>
-                <div id="sessionsList">
-                    <ul>
-                      {% for unique_objective in unique_objectives %}
-                            <li>
-                              <a href="{{ url_for('actions', objective=unique_objective[1]) }}">{{ unique_objective[0]}}</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            <div class="col-md-9">
-                <div class="container-fluid p-3">
-                    <h3>Click an objective to load your action plan</h3>
-                    {{user_actions}}
-
-                    <div id="actionList">
-
-                </div>
-                <div id ="actionList2">
-                  {% for action in actions %}
-<div class="action-item" data-action-id="{{ action.id }}">
-    <input type="checkbox" class="action-checkbox" {% if action.status == 'completed' %}checked{% endif %}>
-    <div class="action-content">
-        <h3 class="action-title">{{ action.title }}</h3>
-        <p class="action-description">{{ action.details }}</p>
     </div>
-    <div class="action-meta">
-        <span class="action-due">{{ action.due_date }}</span>
-        <button class="action-menu">⋮</button>
+    <div class="col-md-9">
+        <div class="container-fluid p-3">
+            <h3>Click an objective to load your action plan</h3>
+            {{user_actions}}
+
+            <div id="actionList">
+
+            </div>
+            <div id="actionList2">
+                {% for action in actions %}
+                <div class="action-item" data-action-id="{{ action.id }}">
+                    <input type="checkbox" class="action-checkbox" {% if action.status=='completed' %}checked{% endif
+                        %}>
+                    <div class="action-content">
+                        <h3 class="action-title">{{ action.title }}</h3>
+                        <p class="action-description">{{ action.details }}</p>
+                    </div>
+                    <div class="action-meta">
+                        <span class="action-due">{{ action.due_date }}</span>
+                        <button class="action-menu">⋮</button>
+                    </div>
+                </div>
+
+                {% endfor %}
+            </div>
+
+
+            </table>
+        </div>
     </div>
 </div>
-{% endfor %}
 
+<!-- Edit Action Modal -->
+<div class="modal fade" id="editActionModal" tabindex="-1" aria-labelledby="editActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editActionModalLabel">Edit Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
-
-                    </table>
-                </div>
+            <div class="modal-body">
+                <form id="editActionForm">
+                    <input type="hidden" id="actionId" name="action_id">
+                    <div class="mb-3">
+                        <label for="actionTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="actionTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="actionDetails" class="form-label">Details</label>
+                        <textarea class="form-control" id="actionDetails" name="details"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="actionDueDate" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="actionDueDate" name="due_date">
+                    </div>
+                </form>
             </div>
-        </div>
-    </div>
-
-    <!-- Edit Action Modal -->
-    <div class="modal fade" id="editActionModal" tabindex="-1" aria-labelledby="editActionModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editActionModalLabel">Edit Action</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editActionForm">
-                        <input type="hidden" id="actionId" name="action_id">
-                        <div class="mb-3">
-                            <label for="actionTitle" class="form-label">Title</label>
-                            <input type="text" class="form-control" id="actionTitle" name="title" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="actionDetails" class="form-label">Details</label>
-                            <textarea class="form-control" id="actionDetails" name="details"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="actionDueDate" class="form-label">Due Date</label>
-                            <input type="date" class="form-control" id="actionDueDate" name="due_date">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="saveActionChanges">Save changes</button>
-                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveActionChanges">Save changes</button>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        $(document).ready(function() {
-            var statusOptions = [
-                "Not Started",
-                "In Progress",
-                "Pending",
-                "Completed"
-            ];
 
-            function createStatusDropdown(action) {
-        var statusOptions = ["Not Started", "In Progress", "Pending", "Completed"];
-        var select = $('<select>').addClass('form-select status-dropdown').data('action-id', action.id);
-        statusOptions.forEach(function(status) {
-            var option = $('<option>').val(status).text(status);
-            if (status === action.status) {
-                option.attr('selected', 'selected');
-            }
-            select.append(option);
-        });
-        return select;
-    }
+{% block extra_scripts %}
+<script>
+    $(document).ready(function () {
+        var statusOptions = [
+            "Not Started",
+            "In Progress",
+            "Pending",
+            "Completed"
+        ];
 
-    function loadActions() {
-        $.ajax({
-            url: '/get_actions',
-            type: 'GET',
-            success: function(data) {
-                var activeActionsTable = $('#activeActionsTable tbody');
-                var completedActionsTable = $('#completedActionsTable tbody');
-                activeActionsTable.empty();
-                completedActionsTable.empty();
+        function createStatusDropdown(action) {
+            var statusOptions = ["Not Started", "In Progress", "Pending", "Completed"];
+            var select = $('<select>').addClass('form-select status-dropdown').data('action-id', action.id);
+            statusOptions.forEach(function (status) {
+                var option = $('<option>').val(status).text(status);
+                if (status === action.status) {
+                    option.attr('selected', 'selected');
+                }
+                select.append(option);
+            });
+            return select;
+        }
 
-                data.actions.forEach(function(action) {
-                    var row = $('<tr>');
-                    row.append($('<td>').text(action.title));
-                    row.append($('<td>').text(action.details));
-                    row.append($('<td>').text(action.due_date));
-                    row.append($('<td>').append(createStatusDropdown(action)));
+        function loadActions() {
+            $.ajax({
+                url: '/get_actions',
+                type: 'GET',
+                success: function (data) {
+                    var activeActionsTable = $('#activeActionsTable tbody');
+                    var completedActionsTable = $('#completedActionsTable tbody');
+                    activeActionsTable.empty();
+                    completedActionsTable.empty();
 
-                    var actionButtons = $('<td>');
-                    var editButton = $('<button>').addClass('btn btn-primary btn-sm edit-action me-2').text('Edit').data('action-id', action.id);
-                    var deleteButton = $('<button>').addClass('btn btn-danger btn-sm delete-action').text('Delete').data('action-id', action.id);
-                    actionButtons.append(editButton, deleteButton);
+                    data.actions.forEach(function (action) {
+                        var row = $('<tr>');
+                        row.append($('<td>').text(action.title));
+                        row.append($('<td>').text(action.details));
+                        row.append($('<td>').text(action.due_date));
+                        row.append($('<td>').append(createStatusDropdown(action)));
 
-                    row.append(actionButtons);
+                        var actionButtons = $('<td>');
+                        var editButton = $('<button>').addClass('btn btn-primary btn-sm edit-action me-2').text('Edit').data('action-id', action.id);
+                        var deleteButton = $('<button>').addClass('btn btn-danger btn-sm delete-action').text('Delete').data('action-id', action.id);
+                        actionButtons.append(editButton, deleteButton);
 
-                    if (action.status === 'Completed') {
-                        completedActionsTable.append(row);
-                    } else {
-                        activeActionsTable.append(row);
-                    }
-                });
-            }
-        });
-    }
+                        row.append(actionButtons);
 
-    loadActions();
+                        if (action.status === 'Completed') {
+                            completedActionsTable.append(row);
+                        } else {
+                            activeActionsTable.append(row);
+                        }
+                    });
+                }
+            });
+        }
+
+        loadActions();
 
         // Edit action
-        $(document).on('click', '.edit-action', function() {
+        $(document).on('click', '.edit-action', function () {
             var actionId = $(this).data('action-id');
             var action = dummyActions.find(a => a.id === actionId);
 
@@ -206,7 +167,7 @@
         });
 
         // Save action changes
-        $('#saveActionChanges').on('click', function() {
+        $('#saveActionChanges').on('click', function () {
             var actionId = parseInt($('#actionId').val());
             var actionIndex = dummyActions.findIndex(a => a.id === actionId);
 
@@ -224,7 +185,7 @@
         });
 
         // Delete action
-        $(document).on('click', '.delete-action', function() {
+        $(document).on('click', '.delete-action', function () {
             var actionId = $(this).data('action-id');
             if (confirm('Are you sure you want to delete this action?')) {
                 var actionIndex = dummyActions.findIndex(a => a.id === actionId);
@@ -236,7 +197,7 @@
         });
 
         // Handle status change
-        $(document).on('change', '.status-dropdown', function() {
+        $(document).on('change', '.status-dropdown', function () {
             var actionId = $(this).data('action-id');
             var newStatus = $(this).val();
             var actionIndex = dummyActions.findIndex(a => a.id === actionId);
@@ -248,35 +209,34 @@
         });
 
         // New conversation button functionality
-        $('#newConversationBtn').on('click', function() {
+        $('#newConversationBtn').on('click', function () {
             alert('This would start a new conversation in a real scenario.');
         });
     });
 
-    $(document).on('change', '.action-checkbox', function() {
-    var actionId = $(this).closest('.action-item').data('action-id');
-    var isCompleted = $(this).is(':checked');
+    $(document).on('change', '.action-checkbox', function () {
+        var actionId = $(this).closest('.action-item').data('action-id');
+        var isCompleted = $(this).is(':checked');
 
-    if (isCompleted) {
-        $.ajax({
-            url: '/complete_action',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ action_id: actionId }),
-            success: function(response) {
-                if (response.success) {
-                    console.log('Action marked as completed');
-                    // You might want to update the UI here
-                } else {
-                    console.error('Failed to mark action as completed:', response.error);
+        if (isCompleted) {
+            $.ajax({
+                url: '/complete_action',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action_id: actionId }),
+                success: function (response) {
+                    if (response.success) {
+                        console.log('Action marked as completed');
+                        // You might want to update the UI here
+                    } else {
+                        console.error('Failed to mark action as completed:', response.error);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error marking action as completed:', error);
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error marking action as completed:', error);
-            }
-        });
-    }
-});
-    </script>
-</body>
-</html>
+            });
+        }
+    });
+</script>
+{% endblock %}
