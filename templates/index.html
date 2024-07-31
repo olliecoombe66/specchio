@@ -7,6 +7,7 @@
 
 {% block extra_scripts %}
 <script>
+
     $(document).ready(function () {
         // Load saved values from cookies or set defaults
         var savedVerbosity = Cookies.get('verbosity') || 3;
@@ -106,6 +107,8 @@
                     var formattedResponse = '<div class="ai-response">' + data.response + '</div>';
                     displayMessage('assistant', formattedResponse, new Date().toLocaleTimeString());
                     $('#response').scrollTop($('#response')[0].scrollHeight);
+                    $('#identifyActionsBtn').prop('disabled', false).text('Identify actions');
+
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     console.error("AJAX error:", textStatus, errorThrown);
@@ -115,6 +118,8 @@
         });
 
         $('#newConversationBtn').on('click', function () {
+            $('#identifyActionsBtn').prop('disabled', true).text('Identify actions (start a conversation first)');
+
             $.ajax({
                 url: '/new_session',
                 type: 'POST',
@@ -151,6 +156,9 @@
 
         // Identify Actions button functionality
         $('#identifyActionsBtn').on('click', function () {
+
+            var originalText = $button.text();
+
             var $button = $(this);
             // Create and insert the loading spinner
             var $loadingIndicator = $('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
@@ -344,24 +352,24 @@
                 </div>
                 <div class="mb-4 float-end">
                     <ul class="list-group">
-                        <button class="btn btn-secondary" type="button" id="identifyActionsBtn">Generate
-                            actions</button>
+                        <button class="btn btn-secondary" type="button" id="identifyActionsBtn" disabled>Identify
+                            actions (start a conversation first)</button>
                     </ul>
                 </div>
+            </div>
+            <div class="prompt-container">
+                <form method="post" action="/chat/">
+                    <div class="input-group">
+                        <textarea class="form-control" id="prompt" name="prompt" rows="3"
+                            placeholder="Enter your prompt here..."></textarea>
+                        <button class="btn btn-primary" type="submit">Submit</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
 
-    <div class="prompt-container">
-        <form method="post" action="/chat/">
-            <div class="input-group">
-                <textarea class="form-control" id="prompt" name="prompt" rows="3"
-                    placeholder="Enter your prompt here..."></textarea>
-                <button class="btn btn-primary" type="submit">Submit</button>
-            </div>
-        </form>
-    </div>
 
 <!-- Actions Modal -->
 <div class="modal fade" id="actionsModal" tabindex="-1" aria-labelledby="actionsModalLabel" aria-hidden="true">
