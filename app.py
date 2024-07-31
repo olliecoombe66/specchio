@@ -12,6 +12,10 @@ import json
 import logging
 from cryptography.fernet import Fernet
 import base64
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+import pickle
 
 
 #get environment variables
@@ -166,7 +170,8 @@ def init_sqlite_db():
             goals TEXT,
             strengths TEXT,
             weaknesses TEXT,
-            additional_info TEXT
+            additional_info TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     cursor.execute('''
@@ -176,7 +181,8 @@ def init_sqlite_db():
             name TEXT,
             job_title TEXT,
             relationship TEXT,
-            notes TEXT
+            notes TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     cursor.execute('''
@@ -184,7 +190,8 @@ def init_sqlite_db():
             user_id INTEGER PRIMARY KEY,
             industry TEXT,
             employee_count INTEGER,
-            description TEXT
+            description TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
@@ -338,6 +345,22 @@ def get_completion(prompt, conversation_history, assistant_verbosity, assistant_
     if not client:
         return "I'm sorry, but there was an issue with the API key. Please check your settings and try again."
 
+     # Check if RAG system needs to be updated
+    context_last_updated = get_context_last_updated(user_id)
+    if 'rag_system' not in session or 'context_last_updated' not in session or session['context_last_updated'] != context_last_updated:
+        update_rag_system(user_id)
+
+    rag = pickle.loads(base64.b64decode(session['rag_system'].encode('utf-8')))
+
+    # Retrieve relevant context
+    relevant_contexts = rag.get_relevant_context(prompt)
+    context_prompt = "Consider the following relevant context. This is extra information and may not be relevant to the conversation. You will not always need this information:\n" + "\n".join(relevant_contexts)
+
+     # Print relevant contexts for testing
+    print("Relevant contexts:")
+    for i, context in enumerate(relevant_contexts, 1):
+        print(f"{i}. {context}")
+
     # Adjust the system message based on verbosity and style
     verbosity_levels = {
         1: "Be very concise and to the point using minimal tokens.",
@@ -355,7 +378,8 @@ def get_completion(prompt, conversation_history, assistant_verbosity, assistant_
         You are a proactive and empathetic career coach, dedicated to passionately supporting individuals in their career development journey. \
          Your coaching style is not only supportive and motivational but also focuses on providing actionable steps and practical advice. \
          Your responses should be insightful, empathetic, and geared towards fostering their career growth. While you do believe in asking thoughtful questions to explore their goals and challenges, you balance this with solid, actionable advice. \
-         After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively."
+         After a few questions, summarize the key points discussed and outline a concise action plan titled 'Your Action Plan' to help them move forward effectively. \
+            {context_prompt}"
 
     
     messages = [
@@ -533,6 +557,120 @@ def clear_reset_token(user_id):
     cursor.execute('DELETE FROM password_reset_tokens WHERE user_id = ?', (user_id,))
     conn.commit()
     conn.close()
+
+
+def get_user_context(user_id):
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM context_personal WHERE user_id = ?', (user_id,))
+        personal_data = cursor.fetchone()
+
+        cursor.execute('SELECT * FROM context_organisation WHERE user_id = ?', (user_id,))
+        organisation_data = cursor.fetchone()
+
+        context_data = {
+            'personal': dict(personal_data) if personal_data else {},
+            'organisation': dict(organisation_data) if organisation_data else {}
+        }
+        
+        return context_data
+    except Exception as e:
+        print(f"Error retrieving context data: {e}")
+        return {'personal': {}, 'organisation': {}}
+    finally:
+        conn.close()
+
+class RAGSystem:
+    def __init__(self):
+        self.vectorizer = TfidfVectorizer()
+        self.context_vectors = None
+        self.context_data = []
+
+    def add_context(self, context):
+        self.context_data.append(context)
+        self.context_vectors = self.vectorizer.fit_transform(self.context_data)
+
+    def get_relevant_context(self, query, top_k=3):
+        query_vector = self.vectorizer.transform([query])
+        similarities = cosine_similarity(query_vector, self.context_vectors)
+        top_indices = np.argsort(similarities[0])[-top_k:][::-1]
+        return [self.context_data[i] for i in top_indices]
+
+    def __getstate__(self):
+        # Custom serialization method
+        state = self.__dict__.copy()
+        del state['vectorizer']
+        state['vectorizer_pickle'] = pickle.dumps(self.vectorizer)
+        if self.context_vectors is not None:
+            state['context_vectors'] = self.context_vectors.toarray()
+        return state
+
+    def __setstate__(self, state):
+        # Custom deserialization method
+        self.__dict__.update(state)
+        self.vectorizer = pickle.loads(state['vectorizer_pickle'])
+        del self.__dict__['vectorizer_pickle']
+        if 'context_vectors' in state:
+            self.context_vectors = self.vectorizer.fit_transform(self.context_data)
+
+def initialize_rag_system(user_id):
+    rag = RAGSystem()
+    context = get_user_context(user_id)
+    
+    # Add personal context
+    personal_context = f"Job Role: {context['personal'].get('job_role', 'Not specified')}\n" \
+                       f"Level: {context['personal'].get('level', 'Not specified')}\n" \
+                       f"Goals: {context['personal'].get('goals', 'Not specified')}\n" \
+                       f"Strengths: {context['personal'].get('strengths', 'Not specified')}\n" \
+                       f"Areas for Improvement: {context['personal'].get('weaknesses', 'Not specified')}"
+    rag.add_context(personal_context)
+    
+    # Add organizational context
+    org_context = f"Industry: {context['organisation'].get('industry', 'Not specified')}\n" \
+                  f"Company Size: {context['organisation'].get('employee_count', 'Not specified')} employees\n" \
+                  f"Description: {context['organisation'].get('description', 'Not specified')}"
+    rag.add_context(org_context)
+    
+    # Add colleague contexts
+    for colleague in context.get('colleagues', []):
+        colleague_context = f"Colleague: {colleague.get('name', 'Not specified')}\n" \
+                            f"Job Title: {colleague.get('job_title', 'Not specified')}\n" \
+                            f"Relationship: {colleague.get('relationship', 'Not specified')}\n" \
+                            f"Notes: {colleague.get('notes', 'Not specified')}"
+        rag.add_context(colleague_context)
+    
+    return rag
+
+
+def update_rag_system(user_id):
+    rag = initialize_rag_system(user_id)
+    session['rag_system'] = base64.b64encode(pickle.dumps(rag)).decode('utf-8')
+    session['context_last_updated'] = get_context_last_updated(user_id)
+
+def get_context_last_updated(user_id):
+    # Implement this function to get the last update timestamp of the user's context
+    # This could be stored in the database when the context is updated
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT MAX(updated_at) 
+        FROM (
+            SELECT MAX(updated_at) as updated_at FROM context_personal WHERE user_id = ?
+            UNION ALL
+            SELECT MAX(updated_at) as updated_at FROM context_organisation WHERE user_id = ?
+            UNION ALL
+            SELECT MAX(updated_at) as updated_at FROM context_colleagues WHERE user_id = ?
+        )
+    ''', (user_id, user_id, user_id))
+    last_updated = cursor.fetchone()[0]
+    conn.close()
+    return last_updated
+
+
+## ROUTES
+
 
 @app.before_request
 def ensure_openai_client():
@@ -1087,6 +1225,10 @@ def save_personal_context():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (user_id, data['jobRole'], data['level'], data['goals'], data['strengths'], data['weaknesses'], data['additionalInfo']))
         conn.commit()
+        
+        # Force RAG system update
+        update_rag_system(user_id)
+
         return jsonify({'success': True})
     except Exception as e:
         print(f"Error saving personal context: {e}")
