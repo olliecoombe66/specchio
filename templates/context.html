@@ -126,7 +126,7 @@
 {% block extra_scripts %}
     <script>
         // Inline the context data
-        var contextData = {{ context_data | tojson | safe }};
+        var contextData = JSON.parse('{{ context_data | tojson | safe }}');
 
         $(document).ready(function() {
             // Populate forms immediately
