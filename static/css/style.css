@@ -19,9 +19,10 @@ html, body {
 
 
 .chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 85vh;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 76px); /* Adjust for navbar height */
+  overflow-y: auto;
 }
 
 .btn {
@@ -41,6 +42,26 @@ html, body {
 .nav-link:hover {
   background: None;
 }
+
+.navbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+
+/* Sticky navbar styles */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+
+/* Adjust main content to account for sticky navbar */
+main {
+  padding-top: 20px;
+}
+
 
 h2,h3,h4 {
   background-image: linear-gradient(to right, #D16ECD, #726CB4);
@@ -238,12 +259,41 @@ h4 {
 }
 
 /* Adding media query for responsiveness */
-@media (max-width: 600px) {
+@media (max-width: 991px) {
   .list-group-item {
     width: 100%; /* Full width on smaller screens */
     max-width: none; /* Remove max-width constraint */
   }
+  .navbar-collapse {
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
 }
+.chat-container {
+    height: calc(100vh - 56px); /* Adjust for mobile navbar height */
+}
+}
+
+
+/* Additional mobile-friendly styles */
+@media (max-width: 767px) {
+  .message {
+      max-width: 90%;
+  }
+
+  .prompt-container {
+      padding: 10px 0;
+  }
+
+  #sessionsPanel {
+      height: auto;
+      max-height: 50vh;
+      border-right: none;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 15px;
+  }
+}
+
+Version 2 of 5
 
 #identifyActionsBtn {
     min-width: 150px;
